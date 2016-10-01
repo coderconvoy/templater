@@ -1,7 +1,6 @@
 package templater
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -17,7 +16,7 @@ func setup() {
 		return
 	}
 	initialised = true
-	jspaths := os.Getenv("GO_JSPATH")
+	jspaths := os.Getenv("GO_SHARE")
 
 	if jspaths == "" {
 		return
@@ -32,10 +31,11 @@ func setup() {
 }
 
 func AddPath(newPath string) {
+	setup()
 	paths = append(paths, newPath)
 }
 
-func GetLib(libname string) []byte {
+func GetSharedFile(libname string) []byte {
 	setup()
 	for i := len(paths) - 1; i >= 0; i-- {
 		res, err := ioutil.ReadFile(path.Join(paths[i], libname))
@@ -46,15 +46,15 @@ func GetLib(libname string) []byte {
 	return make([]byte, 0)
 }
 
-func ServeLib(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/js/")
+//ServeSharedFile will serve the file from any of the shared paths it looks in, prefering those added later.
+//Any paths including "../" are refused
+func ServeSharedFile(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/share/")
 
-	path2 := strings.Replace(path, "../", "", -1)
-	for path2 != path {
-		path = path2
-		path2 = strings.Replace(path, "../", "", -1)
+	if strings.Index(path, "../") >= 0 {
+		w.Write([]byte("No Upward paths (\"../\" allowed"))
+		return
 	}
-	fmt.Printf("Path = :%s\n\n", path)
 
-	w.Write(GetLib(path))
+	w.Write(GetSharedFile(path))
 }

@@ -34,7 +34,8 @@ func tDict(items ...interface{}) (map[string]interface{}, error) {
 func PowerTemplates(glob string) *template.Template {
 	t := template.New("")
 	fMap := template.FuncMap{
-		"tDict": tDict,
+		"tDict":     tDict,
+		"plainText": GetSharedFile,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
