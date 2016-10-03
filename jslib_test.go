@@ -22,7 +22,7 @@ func (self rr) Write(b []byte) (int, error) {
 
 func Test_Writer(t *testing.T) {
 	var w rr
-	req, _ := http.NewRequest("GET", "http://poo.com/js/go_menu/go_menu.js", nil)
+	req, _ := http.NewRequest("GET", "http://poo.com/share/js/go_menu.js", nil)
 	ServeSharedFile(w, req)
 
 }
