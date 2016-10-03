@@ -28,14 +28,18 @@ func tDict(items ...interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
+func GetSharedFileText(libname string) string {
+	return string(GetSharedFile(libname))
+}
+
 /*
    Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
 */
 func PowerTemplates(glob string) *template.Template {
 	t := template.New("")
 	fMap := template.FuncMap{
-		"tDict":     tDict,
-		"plainText": GetSharedFile,
+		"tDict":          tDict,
+		"sharedFileText": GetSharedFileText,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
