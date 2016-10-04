@@ -79,15 +79,19 @@ func (self *MenuEntry) String() string {
 	return res
 }
 
-func TagTree(list []*MenuEntry) *htmlmaker.Tag {
+func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
+
 	ul := htmlmaker.NewTag("ul")
+	if rootID != "" {
+		ul.AddAttrs("id", rootID)
+	}
 	for i := 0; i < len(list); i++ {
 		li := htmlmaker.NewTag("li")
 		ul.AddChildren(li)
 		if len(list[i].Children) > 0 {
 			butt := htmlmaker.NewTag("button", list[i].Name)
 			li.AddChildren(butt)
-			li.AddChildren(TagTree(list[i].Children))
+			li.AddChildren(TagTree(list[i].Children, ""))
 		} else {
 			butt := htmlmaker.NewTag("button", "onclick", list[i].Dest, list[i].Name)
 			li.AddChildren(butt)
@@ -97,13 +101,14 @@ func TagTree(list []*MenuEntry) *htmlmaker.Tag {
 	return ul
 }
 
-func HTMLMenu(fname string) (string, error) {
+func HTMLMenu(fname string, rootID string) (string, error) {
 	arr := GetSharedLines(fname)
 	c, err := NewMenu(arr)
 	if err != nil {
 		return "<ul></ul>", err
 	}
-	domo := TagTree(c.Children)
+
+	domo := TagTree(c.Children, rootID)
 	return domo.String(), nil
 
 }
