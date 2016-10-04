@@ -46,6 +46,12 @@ func GetSharedFile(libname string) []byte {
 	return make([]byte, 0)
 }
 
+func GetSharedLines(libname string) []string {
+	s := string(GetSharedFile(libname))
+	res := strings.Split(s, "\n")
+	return res
+}
+
 //ServeSharedFile will serve the file from any of the shared paths it looks in, prefering those added later.
 //Any paths including "../" are refused
 func ServeSharedFile(w http.ResponseWriter, r *http.Request) {

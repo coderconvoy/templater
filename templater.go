@@ -40,6 +40,7 @@ func PowerTemplates(glob string) *template.Template {
 	fMap := template.FuncMap{
 		"tDict":          tDict,
 		"sharedFileText": GetSharedFileText,
+		"htmlMenu":       HTMLMenu,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)

@@ -51,13 +51,15 @@ func newMenu(ar []string, p int) ([]*MenuEntry, int, error) {
 		} else if s == "}" {
 			return res, i, nil
 		} else {
-			a := strings.Split(s, ":")
-			b := a[0]
-			if len(a) > 1 {
-				b = a[1]
+			if len(s) > 0 {
+				a := strings.Split(s, ":")
+				b := a[0]
+				if len(a) > 1 {
+					b = a[1]
+				}
+				curr = &MenuEntry{a[0], b, nil}
+				res = append(res, curr)
 			}
-			curr = &MenuEntry{a[0], b, nil}
-			res = append(res, curr)
 
 		}
 	}
@@ -92,6 +94,16 @@ func TagTree(list []*MenuEntry) *htmlmaker.Tag {
 		}
 
 	}
-
 	return ul
+}
+
+func HTMLMenu(fname string) (string, error) {
+	arr := GetSharedLines(fname)
+	c, err := NewMenu(arr)
+	if err != nil {
+		return "<ul></ul>", err
+	}
+	domo := TagTree(c.Children)
+	return domo.String(), nil
+
 }
