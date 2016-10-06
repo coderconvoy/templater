@@ -52,7 +52,7 @@ func newMenu(ar []string, p int) ([]*MenuEntry, int, error) {
 			return res, i, nil
 		} else {
 			if len(s) > 0 {
-				a := strings.Split(s, ":")
+				a := strings.Split(s, ",")
 				b := a[0]
 				if len(a) > 1 {
 					b = a[1]
