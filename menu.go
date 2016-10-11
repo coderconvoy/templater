@@ -9,6 +9,7 @@
 package templater
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/coderconvoy/htmlmaker"
 	"strconv"
@@ -89,11 +90,11 @@ func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
 		li := htmlmaker.NewTag("li")
 		ul.AddChildren(li)
 		if len(list[i].Children) > 0 {
-			butt := htmlmaker.NewTag("button", list[i].Name)
+			butt := htmlmaker.NewTag("a", list[i].Name)
 			li.AddChildren(butt)
 			li.AddChildren(TagTree(list[i].Children, ""))
 		} else {
-			butt := htmlmaker.NewTag("button", "onclick", list[i].Dest, list[i].Name)
+			butt := htmlmaker.NewTag("a", "href", list[i].Dest, list[i].Name)
 			li.AddChildren(butt)
 		}
 
@@ -101,6 +102,19 @@ func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
 	return ul
 }
 
+func JSONMenu(fname string) (string, error) {
+	arr := GetSharedLines(fname)
+	c, err := NewMenu(arr)
+	if err != nil {
+		return "{}", err
+	}
+	b, err := json.Marshal(c)
+	if err != nil {
+		return "{}", err
+	}
+	return string(b), nil
+
+}
 func HTMLMenu(fname string, rootID string) (string, error) {
 	arr := GetSharedLines(fname)
 	c, err := NewMenu(arr)

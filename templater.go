@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"text/template"
 )
 
@@ -32,6 +33,10 @@ func GetSharedFileText(libname string) string {
 	return string(GetSharedFile(libname))
 }
 
+func RandRange(l, h int) int {
+	return rand.Intn(h-l) + l
+}
+
 /*
    Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
 */
@@ -41,6 +46,8 @@ func PowerTemplates(glob string) *template.Template {
 		"tDict":          tDict,
 		"sharedFileText": GetSharedFileText,
 		"htmlMenu":       HTMLMenu,
+		"jsonMenu":       JSONMenu,
+		"randRange":      RandRange,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
