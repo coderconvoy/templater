@@ -12,7 +12,7 @@ import (
 
 var initialised bool = false
 var paths []string = make([]string, 0)
-var globRoots []string = make([]string, 0)
+var globRoots map[string]string = make(map[string]string, 0)
 
 func setup() {
 	if initialised {
@@ -38,24 +38,23 @@ func AddPath(newPath string) {
 	paths = append(paths, newPath)
 }
 
-func AddGlobRoot(newPath string) {
-	globRoots = append(globRoots, newPath)
+func AddGlobRoot(k, v string) {
+	globRoots[k] = v
 }
 
 //GetDirList is an attempt at safeguarding a file look up for templates.
 //I want the programmer to be able to define where templates may look for files.
-func GetDirList(dname string, root ...string) ([]os.FileInfo, error) {
+func GetDirList(dname string, rootK string) ([]os.FileInfo, error) {
 	if len(globRoots) == 0 {
 		return []os.FileInfo{}, errors.New("No Safe directories set for GetDirList")
 	}
-	rooty := globRoots[0]
-	if len(root) > 0 {
-		for _, v := range globRoots {
-			if root[0] == v {
-				rooty = v
-			}
-		}
+
+	rooty, ok := globRoots[rootK]
+
+	if !ok {
+		return []os.FileInfo{}, errors.New("No valid folder")
 	}
+
 	if strings.Index(dname, "../") >= 0 {
 		return []os.FileInfo{}, errors.New("No upward paths allowed")
 	}
