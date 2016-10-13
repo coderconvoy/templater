@@ -49,6 +49,7 @@ func PowerTemplates(glob string) *template.Template {
 		"htmlMenu":       HTMLMenu,
 		"jsonMenu":       JSONMenu,
 		"randRange":      RandRange,
+		"getDirList":     GetDirList,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
