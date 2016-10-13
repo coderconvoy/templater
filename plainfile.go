@@ -1,6 +1,7 @@
 package templater
 
 import (
+	"github.com/russross/blackfriday"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -37,6 +38,9 @@ func AddPath(newPath string) {
 
 func GetSharedFile(libname string) []byte {
 	setup()
+	if strings.Index(libname, "../") >= 0 {
+		return []byte("No Upward paths (\"../\" allowed")
+	}
 	for i := len(paths) - 1; i >= 0; i-- {
 		res, err := ioutil.ReadFile(path.Join(paths[i], libname))
 		if err == nil {
@@ -50,6 +54,11 @@ func GetSharedLines(libname string) []string {
 	s := string(GetSharedFile(libname))
 	res := strings.Split(s, "\n")
 	return res
+}
+
+//GetSharedMD will return a parsed MD File from a lib
+func GetSharedMD(fname string) string {
+	return string(blackfriday.MarkdownCommon(GetSharedFile(fname)))
 }
 
 //ServeSharedFile will serve the file from any of the shared paths it looks in, prefering those added later.

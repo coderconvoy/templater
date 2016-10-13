@@ -45,6 +45,7 @@ func PowerTemplates(glob string) *template.Template {
 	fMap := template.FuncMap{
 		"tDict":          tDict,
 		"sharedFileText": GetSharedFileText,
+		"sharedMD":       GetSharedMD,
 		"htmlMenu":       HTMLMenu,
 		"jsonMenu":       JSONMenu,
 		"randRange":      RandRange,
