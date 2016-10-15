@@ -1,6 +1,7 @@
 package templater
 
 import (
+	"bytes"
 	"errors"
 	"github.com/russross/blackfriday"
 	"io/ioutil"
@@ -44,7 +45,7 @@ func AddGlobRoot(k, v string) {
 
 //GetDirList is an attempt at safeguarding a file look up for templates.
 //I want the programmer to be able to define where templates may look for files.
-func GetDirList(dname string, rootK string) ([]os.FileInfo, error) {
+func GetDirList(rootK, dname string) ([]os.FileInfo, error) {
 	if len(globRoots) == 0 {
 		return []os.FileInfo{}, errors.New("No Safe directories set for GetDirList")
 	}
@@ -86,6 +87,36 @@ func GetSharedLines(libname string) []string {
 //GetSharedMD will return a parsed MD File from a lib
 func GetSharedMD(fname string) string {
 	return string(blackfriday.MarkdownCommon(GetSharedFile(fname)))
+}
+
+func ParseHeadedMD(b []byte) map[string]string {
+	ss := []string{"\n#\n", "\n\r#\n\r", "\r#\r"}
+	splitP := -1
+	l := -1
+	for _, v := range ss {
+		splitP = bytes.Index(b, []byte(v))
+		if splitP >= 0 {
+			l = len(v)
+			break
+		}
+	}
+	if splitP == -1 {
+		return map[string]string{"contents": string(b)}
+
+	}
+
+	//TODO make this separate the bits
+	return map[string]string{
+		"contents": string(blackfriday.MarkdownCommon(b[splitP+l:])),
+		"head":     string(b[:splitP]),
+	}
+}
+
+//GetSharedHeadedMD returns first a map with heads and contents separated out
+//Most importantly processed markdown will be in the map as contents
+//other map elements should include tags,css,style
+func GetSharedHeadedMD(fname string) map[string]string {
+	return ParseHeadedMD(GetSharedFile(fname))
 }
 
 //ServeSharedFile will serve the file from any of the shared paths it looks in, prefering those added later.

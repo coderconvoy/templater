@@ -1,7 +1,6 @@
 package templater
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 )
@@ -16,7 +15,7 @@ func (self rr) WriteHeader(int) {
 }
 
 func (self rr) Write(b []byte) (int, error) {
-	fmt.Println(string(b))
+	//fmt.Println(string(b))
 	return len(b), nil
 }
 

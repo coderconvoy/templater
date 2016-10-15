@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_Stuff(t *testing.T) {
+func test_Stuff(t *testing.T) {
 	ar := []string{"Hello", "{", "poo:pee", "Grow:Gree", "No", "}", "Goodbye:adios"}
 
 	m, err := NewMenu(ar)
@@ -19,7 +19,7 @@ func Test_Stuff(t *testing.T) {
 	r, _ := json.Marshal(m.Children)
 	fmt.Println(string(r))
 
-	tree := TagTree(m.Children)
+	tree := TagTree(m.Children, "poo")
 	fmt.Println(tree.String())
 }
 
@@ -30,7 +30,7 @@ func Test_fails(t *testing.T) {
 	}
 	for _, v := range ar {
 		r, err := NewMenu(v)
-		fmt.Println(r)
+		t.Log(r)
 		if err == nil {
 			t.Fail()
 		}
