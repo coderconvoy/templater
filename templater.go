@@ -50,6 +50,7 @@ func PowerTemplates(glob string) *template.Template {
 		"jsonMenu":       JSONMenu,
 		"randRange":      RandRange,
 		"getDirList":     GetDirList,
+		"getHeadedMD":    GetSharedHeadedMD,
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)

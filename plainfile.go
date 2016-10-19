@@ -101,7 +101,7 @@ func ParseHeadedMD(b []byte) map[string]string {
 		}
 	}
 	if splitP == -1 {
-		return map[string]string{"contents": string(b)}
+		return map[string]string{"contents": string(blackfriday.MarkdownCommon(b))}
 
 	}
 
