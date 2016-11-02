@@ -1,4 +1,4 @@
-package templater
+package parse
 
 import (
 	"encoding/json"

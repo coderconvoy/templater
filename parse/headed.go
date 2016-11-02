@@ -1,4 +1,38 @@
-//The menu package provides a simple analasys of a navigation structure
+package parse
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"github.com/coderconvoy/htmlmaker"
+	"github.com/russross/blackfriday"
+	"strconv"
+	"strings"
+)
+
+func HeadedMD(b []byte) map[string]string {
+	ss := []string{"\n#\n", "\n\r#\n\r", "\r#\r"}
+	splitP := -1
+	l := -1
+	for _, v := range ss {
+		splitP = bytes.Index(b, []byte(v))
+		if splitP >= 0 {
+			l = len(v)
+			break
+		}
+	}
+	if splitP == -1 {
+		return map[string]string{"contents": string(blackfriday.MarkdownCommon(b))}
+
+	}
+
+	//TODO make this separate the bits
+	return map[string]string{
+		"contents": string(blackfriday.MarkdownCommon(b[splitP+l:])),
+		"head":     string(b[:splitP]),
+	}
+}
+
 //This aims to take strings formatted similar to
 //name:dest
 //name2
@@ -6,15 +40,6 @@
 //  inner:menu
 //}
 //In this name2 holds an inner menu with 1 element, namely "inner"
-package templater
-
-import (
-	"encoding/json"
-	"errors"
-	"github.com/coderconvoy/htmlmaker"
-	"strconv"
-	"strings"
-)
 
 type MenuEntry struct {
 	Name     string
@@ -102,8 +127,9 @@ func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
 	return ul
 }
 
-func JSONMenu(fname string) (string, error) {
-	arr := GetSharedLines(fname)
+func JSONMenu(data string) (string, error) {
+	arr := strings.Split(data, "\n")
+
 	c, err := NewMenu(arr)
 	if err != nil {
 		return "{}", err
@@ -115,8 +141,9 @@ func JSONMenu(fname string) (string, error) {
 	return string(b), nil
 
 }
-func HTMLMenu(fname string, rootID string) (string, error) {
-	arr := GetSharedLines(fname)
+func HTMLMenu(data string, rootID string) (string, error) {
+
+	arr := strings.Split(data, "\n")
 	c, err := NewMenu(arr)
 	if err != nil {
 		return "<ul></ul>", err

@@ -3,6 +3,7 @@ package templater
 import (
 	"errors"
 	"fmt"
+	"github.com/coderconvoy/templater/shared"
 	"io"
 	"math/rand"
 	"text/template"
@@ -29,10 +30,6 @@ func tDict(items ...interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func GetSharedFileText(libname string) string {
-	return string(GetSharedFile(libname))
-}
-
 func RandRange(l, h int) int {
 	return rand.Intn(h-l) + l
 }
@@ -40,17 +37,22 @@ func RandRange(l, h int) int {
 /*
    Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
 */
-func PowerTemplates(glob string) *template.Template {
+func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
+	//Todo assign Sharer elsewhere
+
+	if sh == nil {
+		sh = shared.NewSharer(true)
+	}
 	t := template.New("")
 	fMap := template.FuncMap{
 		"tDict":          tDict,
-		"sharedFileText": GetSharedFileText,
-		"sharedMD":       GetSharedMD,
-		"htmlMenu":       HTMLMenu,
-		"jsonMenu":       JSONMenu,
 		"randRange":      RandRange,
-		"getDirList":     GetDirList,
-		"getHeadedMD":    GetSharedHeadedMD,
+		"htmlMenu":       sh.GetHTMLMenuF(),
+		"jsonMenu":       sh.GetJSONMenuF(),
+		"getDirList":     sh.GetDirListF(),
+		"sharedFileText": sh.GetFileTextF(),
+		"sharedMD":       sh.GetMDF(),
+		"getHeadedMD":    sh.GetHeadedMDF(),
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)

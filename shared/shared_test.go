@@ -1,4 +1,4 @@
-package templater
+package shared
 
 import (
 	"github.com/russross/blackfriday"
