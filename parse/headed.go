@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -26,11 +27,27 @@ func HeadedMD(b []byte) map[string]string {
 
 	}
 
-	//TODO make this separate the bits
-	return map[string]string{
+	res := map[string]string{
 		"contents": string(blackfriday.MarkdownCommon(b[splitP+l:])),
-		"head":     string(b[:splitP]),
 	}
+	//Split out the header files
+	head := ""
+	scanHead := bufio.NewScanner(bytes.NewReader(b[:splitP]))
+	for scanHead.Scan() {
+		t := scanHead.Text()
+
+		if t[0] == '#' {
+			sp := strings.SplitN(t[1:], ":", 2)
+			if len(sp) == 2 {
+				k := strings.ToLower(strings.TrimSpace(sp[0]))
+				v := strings.TrimSpace(sp[1])
+				res[k] = v
+			}
+		} else {
+			head += t + "\n"
+		}
+	}
+	return res
 }
 
 //This aims to take strings formatted similar to

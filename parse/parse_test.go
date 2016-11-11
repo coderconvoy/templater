@@ -3,8 +3,22 @@ package parse
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
+
+func Test_HeadedMD(t *testing.T) {
+	b, err := ioutil.ReadFile("test_data/t1.md")
+	if err != nil {
+		t.Logf("File Not Read : %s\n", err)
+	}
+
+	m := HeadedMD(b)
+	if m["title"] != "poop" {
+		t.Log("tile not poop")
+		t.Fail()
+	}
+}
 
 func test_Stuff(t *testing.T) {
 	ar := []string{"Hello", "{", "poo:pee", "Grow:Gree", "No", "}", "Goodbye:adios"}
