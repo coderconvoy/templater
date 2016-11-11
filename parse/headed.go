@@ -7,46 +7,65 @@ import (
 	"errors"
 	"github.com/coderconvoy/htmlmaker"
 	"github.com/russross/blackfriday"
+	"io"
 	"strconv"
 	"strings"
 )
 
-func HeadedMD(b []byte) map[string]string {
-	ss := []string{"\n#\n", "\n\r#\n\r", "\r#\r"}
-	splitP := -1
-	l := -1
-	for _, v := range ss {
-		splitP = bytes.Index(b, []byte(v))
-		if splitP >= 0 {
-			l = len(v)
-			break
-		}
-	}
-	if splitP == -1 {
-		return map[string]string{"contents": string(blackfriday.MarkdownCommon(b))}
+func HeadOnly(r io.Reader) (map[string]string, int) {
+	res := map[string]string{}
 
-	}
+	qoth := ""
+	temp := ""
+	linesRead := -1
 
-	res := map[string]string{
-		"contents": string(blackfriday.MarkdownCommon(b[splitP+l:])),
-	}
-	//Split out the header files
-	head := ""
-	scanHead := bufio.NewScanner(bytes.NewReader(b[:splitP]))
+	scanHead := bufio.NewScanner(r)
 	for scanHead.Scan() {
+		linesRead++
 		t := scanHead.Text()
-
-		if t[0] == '#' {
-			sp := strings.SplitN(t[1:], ":", 2)
-			if len(sp) == 2 {
-				k := strings.ToLower(strings.TrimSpace(sp[0]))
-				v := strings.TrimSpace(sp[1])
-				res[k] = v
+		if qoth != "" {
+			//multiline
+			if t == "\"" {
+				res[qoth] = temp
+				qoth = ""
+			} else {
+				temp += t + "\n"
 			}
 		} else {
-			head += t + "\n"
+			if t[0] != '#' {
+				return res, linesRead
+			}
+			sp := strings.SplitN(t[1:], ":", 2)
+			if len(sp) < 2 {
+				return res, linesRead
+			}
+
+			if len(sp) == 2 {
+				if sp[1] == `"` {
+					//begin multiline
+					qoth = sp[0]
+					temp = ""
+
+				} else {
+					k := strings.ToLower(strings.TrimSpace(sp[0]))
+					v := strings.TrimSpace(sp[1])
+					res[k] = v
+				}
+			}
 		}
 	}
+	return res, linesRead
+}
+
+func HeadedMD(b []byte) map[string]string {
+
+	res, lc := HeadOnly(bytes.NewBuffer(b))
+	b2 := b
+	for i := 0; i < lc; i++ {
+		nline := bytes.IndexRune(b2, '\n')
+		b2 = b2[nline+1:]
+	}
+	res["contents"] = string(blackfriday.MarkdownCommon(b2))
 	return res
 }
 
