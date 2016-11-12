@@ -33,6 +33,7 @@ func Test_HeadedMD(t *testing.T) {
 
 func Test_HeadOnly(t *testing.T) {
 	f, err := os.Open("test_data/t1.md")
+	defer f.Close()
 	if err != nil {
 		t.Logf("File Not Read : %s\n", err)
 		t.Fail()
