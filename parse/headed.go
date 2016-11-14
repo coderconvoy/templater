@@ -32,6 +32,9 @@ func HeadOnly(r io.Reader) (map[string]string, int) {
 				temp += t + "\n"
 			}
 		} else {
+			if len(t) == 0 {
+				return res, linesRead
+			}
 			if t[0] != '#' {
 				return res, linesRead
 			}

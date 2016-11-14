@@ -101,7 +101,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 
 	return map[string]string{
 		"title":    "Not Found",
-		"contents": fmt.Sprintf("Could not find \"%s\" in \"%s\"", fol, file),
+		"contents": fmt.Sprintf("Could not find \"%s\" in \"%s\"", file, fol),
 	}
 
 }
