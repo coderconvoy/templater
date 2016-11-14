@@ -1,3 +1,3 @@
 #date:03/04/2015
-#title:My Favourive Color
+#title:My Favourite Color
 For the longest time I have had a favourite color

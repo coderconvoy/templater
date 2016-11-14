@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -19,11 +20,11 @@ type PageInfo struct {
 
 type BlobSet map[string][]PageInfo
 
-type ByDate []PageInfo
+type ByDateDown []PageInfo
 
-func (bd ByDate) Len() int           { return len(bd) }
-func (bd ByDate) Less(a, b int) bool { return bd[a].Date.Before(bd[b].Date) }
-func (bd ByDate) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
+func (bd ByDateDown) Len() int           { return len(bd) }
+func (bd ByDateDown) Less(a, b int) bool { return bd[b].Date.Before(bd[a].Date) }
+func (bd ByDateDown) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
 
 func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
 	if res, ok := (*bs)[fol]; ok {
@@ -64,19 +65,48 @@ func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
 				dt = pt
 			}
 		}
-		res = append(res, PageInfo{v.Name(), t, dt})
+		res = append(res, PageInfo{t, v.Name(), dt})
 
 		f.Close()
 	}
 
-	sort.Sort(ByDate(res))
+	sort.Sort(ByDateDown(res))
 
 	(*bs)[fol] = res
 
 	return res, nil
 }
 
-func BlobGetter() chan func(bs BlobSet) {
+func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
+	infos, err := bs.GetDir(fol)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	for _, v := range infos {
+		if v.FName == file || v.Title == file {
+
+			f, err := ioutil.ReadFile(path.Join(fol, v.FName))
+			if err != nil {
+				return map[string]string{
+					"title":    "File Not Loaded",
+					"contents": err.Error(),
+				}
+
+			}
+			return parse.HeadedMD(f)
+
+		}
+	}
+
+	return map[string]string{
+		"title":    "Not Found",
+		"contents": fmt.Sprintf("Could not find \"%s\" in \"%s\"", fol, file),
+	}
+
+}
+
+func BlobGetter() chan func(BlobSet) {
 	ch := make(chan func(BlobSet))
 
 	go func() {
@@ -86,5 +116,35 @@ func BlobGetter() chan func(bs BlobSet) {
 		}
 	}()
 	return ch
+}
 
+func AccessMap(ch chan func(BlobSet)) template.FuncMap {
+	type backinfo struct {
+		pi  []PageInfo
+		err error
+	}
+	getAll := func(fol string) ([]PageInfo, error) {
+		bchan := make(chan backinfo)
+		ch <- func(bs BlobSet) {
+			bi, er := bs.GetDir(fol)
+			res := backinfo{bi, er}
+			bchan <- res
+		}
+		res := <-bchan
+		return res.pi, res.err
+	}
+
+	getOne := func(fol, file string) map[string]string {
+		bchan := make(chan map[string]string)
+		ch <- func(bs BlobSet) {
+			bchan <- bs.GetBlob(fol, file)
+		}
+		return <-bchan
+
+	}
+
+	return template.FuncMap{
+		"getblobdir": getAll,
+		"getblob":    getOne,
+	}
 }
