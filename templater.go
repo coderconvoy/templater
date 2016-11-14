@@ -58,7 +58,7 @@ func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
 
 	blobMap := blob.AccessMap(blob.BlobGetter())
 	for k, v := range blobMap {
-		fmap[k] = v
+		fMap[k] = v
 	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
