@@ -84,7 +84,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 	}
 
 	for _, v := range infos {
-		if v.FName == file || v.Title == file {
+		if v.FName == file || v.Title == file || file == "" {
 
 			f, err := ioutil.ReadFile(path.Join(fol, v.FName))
 			if err != nil {
