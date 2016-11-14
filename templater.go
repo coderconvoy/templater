@@ -3,6 +3,7 @@ package templater
 import (
 	"errors"
 	"fmt"
+	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/shared"
 	"io"
 	"math/rand"
