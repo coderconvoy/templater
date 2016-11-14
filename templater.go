@@ -54,6 +54,11 @@ func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
 		"sharedMD":       sh.GetMDF(),
 		"getHeadedMD":    sh.GetHeadedMDF(),
 	}
+
+	blobMap := blob.AccessMap(blob.BlobGetter())
+	for k, v := range blobMap {
+		fmap[k] = v
+	}
 	t = t.Funcs(fMap)
 	t, err := t.ParseGlob(glob)
 	if err != nil {
