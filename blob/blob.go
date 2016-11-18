@@ -18,6 +18,12 @@ type PageInfo struct {
 	Date  time.Time
 }
 
+type ClosedSetError string
+
+func (cse ClosedSetError) Error() string {
+	return string(cse)
+}
+
 type BlobSet map[string][]PageInfo
 
 type ByDateDown []PageInfo
@@ -106,40 +112,81 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 
 }
 
-func BlobGetter() chan func(BlobSet) {
+func SafeBlobFuncs() (template.FuncMap, func()) {
+	ch, saf := blobChans()
+
+	runner, killer := blobGetter(ch, saf)
+
+	return AccessMap(runner), killer
+}
+
+func blobGetter(ch chan func(BlobSet), safety chan bool) (func(func(BlobSet)) error, func()) {
+
+	runner := func(f func(BlobSet)) error {
+		if <-safety {
+			ch <- f
+			return nil
+		}
+		return ClosedSetError("Closed Set Blob")
+
+	}
+
+	killer := func() {
+		if <-safety {
+			close(ch)
+		}
+	}
+
+	return runner, killer
+}
+
+func blobChans() (chan func(BlobSet), chan bool) {
 	ch := make(chan func(BlobSet))
+	safety := make(chan bool)
 
 	go func() {
 		bb := BlobSet{}
+		safety <- true
 		for fn := range ch {
 			fn(bb)
+			safety <- true
 		}
+		close(safety)
 	}()
-	return ch
+	return ch, safety
+
 }
 
-func AccessMap(ch chan func(BlobSet)) template.FuncMap {
+func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
 	type backinfo struct {
 		pi  []PageInfo
 		err error
 	}
+
 	getAll := func(fol string) ([]PageInfo, error) {
 		bchan := make(chan backinfo)
-		ch <- func(bs BlobSet) {
+		err := runner(func(bs BlobSet) {
 			bi, er := bs.GetDir(fol)
 			res := backinfo{bi, er}
 			bchan <- res
+		})
+
+		if err != nil {
+			return nil, err
 		}
 		res := <-bchan
 		return res.pi, res.err
 	}
 
-	getOne := func(fol, file string) map[string]string {
+	getOne := func(fol, file string) (map[string]string, error) {
 		bchan := make(chan map[string]string)
-		ch <- func(bs BlobSet) {
+		err := runner(func(bs BlobSet) {
 			bchan <- bs.GetBlob(fol, file)
+		})
+		if err != nil {
+			return nil, err
 		}
-		return <-bchan
+		return <-bchan, nil
 
 	}
 

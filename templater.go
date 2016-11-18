@@ -10,6 +10,11 @@ import (
 	"text/template"
 )
 
+type PowerTemplate struct {
+	*template.Template
+	killer func()
+}
+
 /*
    For use inside templates: Converts text sent from one template to another into a map whcih can then be accessed by {{ index }}
 */
@@ -35,10 +40,8 @@ func RandRange(l, h int) int {
 	return rand.Intn(h-l) + l
 }
 
-/*
-   Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-*/
-func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
+//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
+func NewPowerTemplate(glob string, sh *shared.Sharer) *PowerTemplate {
 	//Todo assign Sharer elsewhere
 
 	if sh == nil {
@@ -56,7 +59,7 @@ func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
 		"getHeadedMD":    sh.GetHeadedMDF(),
 	}
 
-	blobMap := blob.AccessMap(blob.BlobGetter())
+	blobMap, killer := blob.SafeBlobFuncs()
 	for k, v := range blobMap {
 		fMap[k] = v
 	}
@@ -66,11 +69,12 @@ func PowerTemplates(glob string, sh *shared.Sharer) *template.Template {
 		fmt.Println(err)
 		panic(err)
 	}
-	return t
+	return &PowerTemplate{t, killer}
+
 }
 
 /*
-   This is the core Execution method. This will write the io.Writer with the execution of the template. It handles any error, by both writing it to the User, and also to std out.
+   This is a lazy Execution method. This will write the io.Writer with the execution of the template. It handles any error, by both writing it to the User, and also to std out.
 */
 func Exec(t *template.Template, w io.Writer, tName string, data interface{}) {
 	err := t.ExecuteTemplate(w, tName, data)

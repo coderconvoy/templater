@@ -26,7 +26,7 @@ func Test_Loader(t *testing.T) {
 }
 
 func TestChannelAccess(t *testing.T) {
-	fm := AccessMap(BlobGetter())
+	fm, killer := SafeBlobFuncs()
 
 	pinf, err := fm["getblobdir"].(func(string) ([]PageInfo, error))("test_data")
 	if err != nil {
@@ -38,12 +38,25 @@ func TestChannelAccess(t *testing.T) {
 		t.Fail()
 	}
 
-	mp := fm["getblob"].(func(string, string) map[string]string)("test_data", "purple.md")
+	getblob := fm["getblob"].(func(string, string) (map[string]string, error))
+	mp, err := getblob("test_data", "purple.md")
+	if err != nil {
+		t.Log("getblob1 error back")
+		t.FailNow()
+	}
 	if mp["title"] != "My Favourite Color" {
 		t.Logf("title expected 'My Favourite Color' got %s", mp["title"])
 		t.Logf(mp["contents"])
 		t.Fail()
 	}
+	killer()
+
+	_, err = getblob("test_data", "purple.md")
+	if err == nil {
+		t.Log("No Error on closed chan fail")
+		t.Fail()
+	}
+
 }
 
 func test_ReadDir(t *testing.T) {
