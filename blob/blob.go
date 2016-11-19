@@ -89,7 +89,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 		return map[string]string{}
 	}
 
-	for _, v := range infos {
+	for i, v := range infos {
 		if v.FName == file || v.Title == file || file == "" {
 
 			f, err := ioutil.ReadFile(path.Join(fol, v.FName))
@@ -100,7 +100,14 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 				}
 
 			}
-			return parse.HeadedMD(f)
+			res := parse.HeadedMD(f)
+			if i > 0 {
+				res["next"] = infos[i-1].FName
+			}
+			if i+1 < len(infos) {
+				res["prev"] = infos[i+1].FName
+			}
+			return res
 
 		}
 	}
