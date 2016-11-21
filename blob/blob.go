@@ -103,6 +103,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 
 			}
 			res := parse.HeadedMD(f)
+			res["FName"] = v.FName
 			if i > 0 {
 				res["next"] = infos[i-1].FName
 			}
