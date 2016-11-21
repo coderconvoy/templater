@@ -88,15 +88,17 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 	if err != nil {
 		return map[string]string{}
 	}
+	file = strings.ToLower(file)
 
 	for i, v := range infos {
-		if v.FName == file || v.Title == file || file == "" {
+		if strings.ToLower(v.FName) == file || strings.ToLower(v.Title) == file || file == "" {
 
 			f, err := ioutil.ReadFile(path.Join(fol, v.FName))
 			if err != nil {
 				return map[string]string{
 					"title":    "File Not Loaded",
 					"contents": err.Error(),
+					"FName":    v.FName,
 				}
 
 			}
