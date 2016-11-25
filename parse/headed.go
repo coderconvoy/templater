@@ -166,6 +166,7 @@ func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
 }
 
 func JSONMenu(data string) (string, error) {
+
 	arr := strings.Split(data, "\n")
 
 	c, err := NewMenu(arr)
@@ -179,6 +180,7 @@ func JSONMenu(data string) (string, error) {
 	return string(b), nil
 
 }
+
 func HTMLMenu(data string, rootID string) (string, error) {
 
 	arr := strings.Split(data, "\n")
@@ -189,5 +191,4 @@ func HTMLMenu(data string, rootID string) (string, error) {
 
 	domo := TagTree(c.Children, rootID)
 	return domo.String(), nil
-
 }

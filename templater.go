@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coderconvoy/templater/blob"
+	"github.com/coderconvoy/templater/parse"
+	"github.com/russross/blackfriday"
 	"io"
 	"math/rand"
 	"text/template"
@@ -39,20 +41,38 @@ func RandRange(l, h int) int {
 	return rand.Intn(h-l) + l
 }
 
+func mdParse(d interface{}) string {
+	switch v := d.(type) {
+	case string:
+		return string(blackfriday.MarkdownCommon([]byte(v)))
+	case []byte:
+		return string(blackfriday.MarkdownCommon(v))
+	}
+	return ""
+}
+
+func jsonMenu(d interface{}) (string, error) {
+	switch v := d.(type) {
+	case string:
+		return parse.JSONMenu(v)
+	case []byte:
+		return parse.JSONMenu(string(v))
+	}
+
+	return "", fmt.Errorf("jsonMenu requires string or []byte")
+
+}
+
 //Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, root string) *PowerTemplate {
+func NewPowerTemplate(glob string) *PowerTemplate {
 	//Todo assign Sharer elsewhere
 
 	t := template.New("")
 	fMap := template.FuncMap{
 		"tDict":     tDict,
 		"randRange": RandRange,
-		/*		"htmlMenu":       sh.GetHTMLMenuF(),
-				"jsonMenu":       sh.GetJSONMenuF(),
-				"getDirList":     sh.GetDirListF(),
-				"sharedFileText": sh.GetFileTextF(),
-				"sharedMD":       sh.GetMDF(),
-				"getHeadedMD":    sh.GetHeadedMDF(),*/
+		"md":        mdParse,
+		"jsonMenu":  jsonMenu,
 	}
 
 	blobMap, killer := blob.SafeBlobFuncs()

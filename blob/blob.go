@@ -40,7 +40,7 @@ func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
 
 	d, err := ioutil.ReadDir(fol)
 	if err != nil {
-		fmt.Println("Dir Not Available")
+		fmt.Println("Dir Not Available %s", fol)
 		return nil, fmt.Errorf("GetDir could not read dir %s", err)
 	}
 	res := make([]PageInfo, 0)
@@ -211,9 +211,19 @@ func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
 
 	}
 
+	getContent := func(fol, file string) (string, error) {
+		res, err := getOne(fol, file)
+		if err != nil {
+			return "", err
+		}
+
+		return res["contents"], nil
+	}
+
 	return template.FuncMap{
 		"getblobdir": getAll,
 		"getblob":    getOne,
 		"getblobMD":  getOneMD,
+		"getblobc":   getContent,
 	}
 }
