@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+//HeadOnly reads just the head from a reader and stops there. It returns, the head details, but no contents.
 func HeadOnly(r io.Reader) (map[string]string, int) {
 	res := map[string]string{}
 
@@ -78,7 +79,6 @@ func Headed(b []byte) map[string]string {
 //  inner:menu
 //}
 //In this name2 holds an inner menu with 1 element, namely "inner"
-
 type MenuEntry struct {
 	Name     string
 	Dest     string

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coderconvoy/templater/blob"
-	"github.com/coderconvoy/templater/shared"
 	"io"
 	"math/rand"
 	"text/template"
@@ -41,22 +40,19 @@ func RandRange(l, h int) int {
 }
 
 //Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, sh *shared.Sharer) *PowerTemplate {
+func NewPowerTemplate(glob string, root string) *PowerTemplate {
 	//Todo assign Sharer elsewhere
 
-	if sh == nil {
-		sh = shared.NewSharer(true)
-	}
 	t := template.New("")
 	fMap := template.FuncMap{
-		"tDict":          tDict,
-		"randRange":      RandRange,
-		"htmlMenu":       sh.GetHTMLMenuF(),
-		"jsonMenu":       sh.GetJSONMenuF(),
-		"getDirList":     sh.GetDirListF(),
-		"sharedFileText": sh.GetFileTextF(),
-		"sharedMD":       sh.GetMDF(),
-		"getHeadedMD":    sh.GetHeadedMDF(),
+		"tDict":     tDict,
+		"randRange": RandRange,
+		/*		"htmlMenu":       sh.GetHTMLMenuF(),
+				"jsonMenu":       sh.GetJSONMenuF(),
+				"getDirList":     sh.GetDirListF(),
+				"sharedFileText": sh.GetFileTextF(),
+				"sharedMD":       sh.GetMDF(),
+				"getHeadedMD":    sh.GetHeadedMDF(),*/
 	}
 
 	blobMap, killer := blob.SafeBlobFuncs()
