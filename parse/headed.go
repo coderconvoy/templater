@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/coderconvoy/htmlmaker"
-	"github.com/russross/blackfriday"
 	"io"
 	"strconv"
 	"strings"
@@ -60,16 +59,16 @@ func HeadOnly(r io.Reader) (map[string]string, int) {
 	return res, linesRead
 }
 
-func HeadedMD(b []byte) map[string]string {
-
+func Headed(b []byte) map[string]string {
 	res, lc := HeadOnly(bytes.NewBuffer(b))
 	b2 := b
 	for i := 0; i < lc; i++ {
 		nline := bytes.IndexRune(b2, '\n')
 		b2 = b2[nline+1:]
 	}
-	res["contents"] = string(blackfriday.MarkdownCommon(b2))
+	res["contents"] = string(b2)
 	return res
+
 }
 
 //This aims to take strings formatted similar to

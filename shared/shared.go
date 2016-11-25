@@ -105,11 +105,13 @@ func (self *Sharer) GetHeadedMDF() func(string) map[string]string {
 	}
 }
 
-//GetHeadedMD returns first a map with heads and contents separated out
+//GetHeaded returns first a map with heads and contents separated out
 //processed markdown will be in the map as contents
 //other map elements should include tags,css,style
 func (self *Sharer) GetHeadedMD(fname string) map[string]string {
-	return parse.HeadedMD(self.GetFile(fname))
+	res := parse.Headed(self.GetFile(fname))
+	res["contents"] = string(blackfriday.MarkdownCommon([]byte(res["contents"])))
+	return res
 }
 
 //Get parser for MenuJSON

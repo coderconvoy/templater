@@ -3,6 +3,7 @@ package blob
 import (
 	"fmt"
 	"github.com/coderconvoy/templater/parse"
+	"github.com/russross/blackfriday"
 	"io/ioutil"
 	"os"
 	"path"
@@ -102,7 +103,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 				}
 
 			}
-			res := parse.HeadedMD(f)
+			res := parse.Headed(f)
 			res["FName"] = v.FName
 			if i > 0 {
 				res["next"] = infos[i-1].FName
@@ -200,8 +201,19 @@ func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
 
 	}
 
+	getOneMD := func(fol, file string) (map[string]string, error) {
+		res, err := getOne(fol, file)
+		if err != nil {
+			return nil, err
+		}
+		res["contents"] = string(blackfriday.MarkdownCommon([]byte(res["contents"])))
+		return res, nil
+
+	}
+
 	return template.FuncMap{
 		"getblobdir": getAll,
 		"getblob":    getOne,
+		"getblobMD":  getOneMD,
 	}
 }
