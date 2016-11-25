@@ -1,3 +1,5 @@
+//The Purpose of the blob package is to provide a quick way of grabbing headed files from a template
+//calling blob.SafeBlobFuncs(string) returns a map of functions all wrapped in clojures to access the same BlobSet Blobs the header data from each blob is stored in ram, for quick listing and archiving in the main use
 package blob
 
 import (
@@ -19,13 +21,15 @@ type PageInfo struct {
 	Date  time.Time
 }
 
-type ClosedSetError string
-
-func (cse ClosedSetError) Error() string {
-	return string(cse)
+type BlobSet struct {
+	root string
+	m    map[string][]PageInfo
 }
 
-type BlobSet map[string][]PageInfo
+func NewBlobSet(root string) *BlobSet {
+	return &BlobSet{root, make(map[string][]PageInfo)}
+
+}
 
 type ByDateDown []PageInfo
 
@@ -34,7 +38,9 @@ func (bd ByDateDown) Less(a, b int) bool { return bd[b].Date.Before(bd[a].Date) 
 func (bd ByDateDown) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
 
 func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
-	if res, ok := (*bs)[fol]; ok {
+
+	fol = path.Join(bs.root, fol)
+	if res, ok := bs.m[fol]; ok {
 		return res, nil
 	}
 
@@ -79,7 +85,7 @@ func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
 
 	sort.Sort(ByDateDown(res))
 
-	(*bs)[fol] = res
+	bs.m[fol] = res
 
 	return res, nil
 }
@@ -94,7 +100,7 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 	for i, v := range infos {
 		if strings.ToLower(v.FName) == file || strings.ToLower(v.Title) == file || file == "" {
 
-			f, err := ioutil.ReadFile(path.Join(fol, v.FName))
+			f, err := ioutil.ReadFile(path.Join(bs.root, fol, v.FName))
 			if err != nil {
 				return map[string]string{
 					"title":    "File Not Loaded",
@@ -123,22 +129,22 @@ func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
 
 }
 
-func SafeBlobFuncs() (template.FuncMap, func()) {
-	ch, saf := blobChans()
+func SafeBlobFuncs(root string) (template.FuncMap, func()) {
+	ch, saf := blobChans(root)
 
 	runner, killer := blobGetter(ch, saf)
 
 	return AccessMap(runner), killer
 }
 
-func blobGetter(ch chan func(BlobSet), safety chan bool) (func(func(BlobSet)) error, func()) {
+func blobGetter(ch chan func(*BlobSet), safety chan bool) (func(func(*BlobSet)) error, func()) {
 
-	runner := func(f func(BlobSet)) error {
+	runner := func(f func(*BlobSet)) error {
 		if <-safety {
 			ch <- f
 			return nil
 		}
-		return ClosedSetError("Closed Set Blob")
+		return fmt.Errorf("Closed Set Blob")
 
 	}
 
@@ -151,12 +157,12 @@ func blobGetter(ch chan func(BlobSet), safety chan bool) (func(func(BlobSet)) er
 	return runner, killer
 }
 
-func blobChans() (chan func(BlobSet), chan bool) {
-	ch := make(chan func(BlobSet))
+func blobChans(root string) (chan func(*BlobSet), chan bool) {
+	ch := make(chan func(*BlobSet))
 	safety := make(chan bool)
 
 	go func() {
-		bb := BlobSet{}
+		bb := NewBlobSet(root)
 		safety <- true
 		for fn := range ch {
 			fn(bb)
@@ -168,7 +174,7 @@ func blobChans() (chan func(BlobSet), chan bool) {
 
 }
 
-func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
+func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 	type backinfo struct {
 		pi  []PageInfo
 		err error
@@ -176,7 +182,7 @@ func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
 
 	getAll := func(fol string) ([]PageInfo, error) {
 		bchan := make(chan backinfo)
-		err := runner(func(bs BlobSet) {
+		err := runner(func(bs *BlobSet) {
 			bi, er := bs.GetDir(fol)
 			res := backinfo{bi, er}
 			bchan <- res
@@ -191,7 +197,7 @@ func AccessMap(runner func(func(BlobSet)) error) template.FuncMap {
 
 	getOne := func(fol, file string) (map[string]string, error) {
 		bchan := make(chan map[string]string)
-		err := runner(func(bs BlobSet) {
+		err := runner(func(bs *BlobSet) {
 			bchan <- bs.GetBlob(fol, file)
 		})
 		if err != nil {

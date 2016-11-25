@@ -7,9 +7,9 @@ import (
 )
 
 func Test_Loader(t *testing.T) {
-	bs := BlobSet{}
+	bs := NewBlobSet("test_data")
 
-	recs, err := bs.GetDir("test_data")
+	recs, err := bs.GetDir("s")
 	if err != nil {
 		t.Log("Get Error")
 		t.FailNow()
@@ -26,9 +26,9 @@ func Test_Loader(t *testing.T) {
 }
 
 func TestChannelAccess(t *testing.T) {
-	fm, killer := SafeBlobFuncs()
+	fm, killer := SafeBlobFuncs("test_data")
 
-	pinf, err := fm["getblobdir"].(func(string) ([]PageInfo, error))("test_data")
+	pinf, err := fm["getblobdir"].(func(string) ([]PageInfo, error))("s")
 	if err != nil {
 		t.Logf("Chan Err:%s", err)
 		t.FailNow()
@@ -39,7 +39,7 @@ func TestChannelAccess(t *testing.T) {
 	}
 
 	getblob := fm["getblob"].(func(string, string) (map[string]string, error))
-	mp, err := getblob("test_data", "purple.md")
+	mp, err := getblob("s", "purple.md")
 	if err != nil {
 		t.Log("getblob1 error back")
 		t.FailNow()
@@ -51,7 +51,7 @@ func TestChannelAccess(t *testing.T) {
 	}
 	killer()
 
-	_, err = getblob("test_data", "purple.md")
+	_, err = getblob("s", "purple.md")
 	if err == nil {
 		t.Log("No Error on closed chan fail")
 		t.Fail()

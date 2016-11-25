@@ -64,7 +64,7 @@ func jsonMenu(d interface{}) (string, error) {
 }
 
 //Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string) *PowerTemplate {
+func NewPowerTemplate(glob string, root string) *PowerTemplate {
 	//Todo assign Sharer elsewhere
 
 	t := template.New("")
@@ -75,7 +75,7 @@ func NewPowerTemplate(glob string) *PowerTemplate {
 		"jsonMenu":  jsonMenu,
 	}
 
-	blobMap, killer := blob.SafeBlobFuncs()
+	blobMap, killer := blob.SafeBlobFuncs(root)
 	for k, v := range blobMap {
 		fMap[k] = v
 	}
