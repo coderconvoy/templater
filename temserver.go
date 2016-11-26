@@ -44,7 +44,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	// Empty for index
 
 	if p == "" {
-		err = templates.ExecuteTemplate(w, "index", nil)
+		err = templates.ExecuteTemplate(w, "index", Loose{"", style})
 		if err != nil {
 			fmt.Fprintf(w, "Could not load index, err = %s", err)
 			fmt.Printf("Could not load index, err = %s", err)
