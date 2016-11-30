@@ -83,6 +83,34 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func editToTLS(w http.ResponseWriter, r *http.Request) {
+	if !strings.HasPrefix(r.URL.Path, "/edit/") && (r.URL.Path != "/edit") {
+		bigHandler(w, r)
+		return
+	}
+
+	h := r.URL.Host
+	if h != "" {
+		http.Redirect(w, r, "https://"+r.URL.Host+"/edit", 301)
+		return
+	}
+
+	fmt.fPrintf(w, "please replace http with https in link")
+
+}
+
+type EditHandle struct{}
+
+func (eh *EditHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !strings.HasPrefix(r.URL.Path, "/edit/") && (r.URL.Path != "/edit") {
+
+		bigHandler(w, r)
+		return
+	}
+	fmt.Fprintf(w, "Hello tls")
+
+}
+
 func main() {
 
 	root := flag.String("r", "", "root file path for access to files")
@@ -93,9 +121,12 @@ func main() {
 	fs := http.FileServer(http.Dir(*root + "/s"))
 	http.Handle("/s/", http.StripPrefix("/s/", fs))
 
-	http.HandleFunc("/", bigHandler)
+	http.HandleFunc("/", editToTLS)
 
 	fmt.Println("Started")
-	http.ListenAndServe(":"+*port, nil)
+	go http.ListenAndServe(":"+*port, nil)
+
+	err := http.ListenAndServeTLS(":8443", "/home/matthew/keys/local.crt", "/home/matthew/keys/local.key", &EditHandle{})
+	fmt.Println(err)
 
 }
