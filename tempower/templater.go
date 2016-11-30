@@ -37,6 +37,13 @@ func tDict(items ...interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
+func boolSelect(cond bool, a, b interface{}) interface{} {
+	if cond {
+		return a
+	}
+	return b
+}
+
 func RandRange(l, h int) int {
 	return rand.Intn(h-l) + l
 }
@@ -73,6 +80,7 @@ func NewPowerTemplate(glob string, root string) *PowerTemplate {
 		"randRange": RandRange,
 		"md":        mdParse,
 		"jsonMenu":  jsonMenu,
+		"bSelect":   boolSelect,
 	}
 
 	blobMap, killer := blob.SafeBlobFuncs(root)
