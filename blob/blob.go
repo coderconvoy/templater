@@ -28,7 +28,18 @@ type BlobSet struct {
 
 func NewBlobSet(root string) *BlobSet {
 	return &BlobSet{root, make(map[string][]PageInfo)}
+}
 
+type DeadBlobErr struct{}
+
+func (dbe DeadBlobErr) Error() string {
+	return "This blob has been killed"
+}
+
+var deadBlob = DeadBlobErr{}
+
+func DeadBlob() error {
+	return deadBlob
 }
 
 type ByDateDown []PageInfo
@@ -144,8 +155,7 @@ func blobGetter(ch chan func(*BlobSet), safety chan bool) (func(func(*BlobSet)) 
 			ch <- f
 			return nil
 		}
-		return fmt.Errorf("Closed Set Blob")
-
+		return deadBlob
 	}
 
 	killer := func() {

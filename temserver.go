@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +18,21 @@ type Loose struct {
 }
 
 var templates *tempower.PowerTemplate
+
+func tryTemplate(w io.Writer, p string, data interface{}) error {
+	b := new(bytes.Buffer)
+	for i := 0; i < 10; i++ {
+		err := templates.ExecuteTemplate(b, p, data)
+		if err == nil {
+			w.Write(b.Bytes())
+			return nil
+		}
+		if err != blob.DeadBlob() {
+			return err
+		}
+	}
+	return fmt.Errorf("Tried too many times to access blob")
+}
 
 func bigHandler(w http.ResponseWriter, r *http.Request) {
 	//Handle restyling options with a style cookie
@@ -44,7 +62,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	// Empty for index
 
 	if p == "" {
-		err = templates.ExecuteTemplate(w, "index", Loose{"", style})
+		err = tryTemplate(w, "index", Loose{"", style})
 		if err != nil {
 			fmt.Fprintf(w, "Could not load index, err = %s", err)
 			fmt.Printf("Could not load index, err = %s", err)
@@ -58,7 +76,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	//try template
 	for k, v := range p {
 		if v == '/' {
-			err = templates.ExecuteTemplate(w, p[:k], Loose{p[k+1:], style})
+			err = tryTemplate(w, p[:k], Loose{p[k+1:], style})
 
 			if err == nil {
 				return
@@ -66,7 +84,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 			errs = append(errs, err)
 		}
 	}
-	err = templates.ExecuteTemplate(w, p, Loose{"", style})
+	err = tryTemplate(w, p, Loose{"", style})
 	if err == nil {
 		return
 	}
@@ -74,7 +92,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 	//Default
 	fmt.Println(errs)
-	err = templates.ExecuteTemplate(w, "loose", Loose{p + ".md", style})
+	err = tryTemplate(w, "loose", Loose{p + ".md", style})
 	if err != nil {
 		fmt.Println(err)
 		fmt.Fprintln(w, err)
@@ -95,7 +113,7 @@ func editToTLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.fPrintf(w, "please replace http with https in link")
+	fmt.Fprintf(w, "please replace http with https in link")
 
 }
 
@@ -115,6 +133,7 @@ func main() {
 
 	root := flag.String("r", "", "root file path for access to files")
 	port := flag.String("p", "8080", "port to bind to")
+	//tlsport := flag.String("tls", "8430", "Tls Port to bind to")
 	flag.Parse()
 	templates = tempower.NewPowerTemplate(*root+"/templates/*.html", *root)
 
@@ -124,9 +143,9 @@ func main() {
 	http.HandleFunc("/", editToTLS)
 
 	fmt.Println("Started")
-	go http.ListenAndServe(":"+*port, nil)
+	http.ListenAndServe(":"+*port, nil)
 
-	err := http.ListenAndServeTLS(":8443", "/home/matthew/keys/local.crt", "/home/matthew/keys/local.key", &EditHandle{})
-	fmt.Println(err)
+	//err := http.ListenAndServeTLS(":"+*tlsport, "/home/matthew/keys/local.crt", "/home/matthew/keys/local.key", &EditHandle{})
+	//fmt.Println(err)
 
 }
