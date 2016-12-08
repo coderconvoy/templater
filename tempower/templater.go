@@ -8,6 +8,7 @@ import (
 	"github.com/russross/blackfriday"
 	"io"
 	"math/rand"
+	"reflect"
 	"text/template"
 )
 
@@ -70,6 +71,26 @@ func jsonMenu(d interface{}) (string, error) {
 
 }
 
+func getN(n int, d interface{}) (interface{}, error) {
+	//TODO consider adding support for maps
+
+	if reflect.TypeOf(d).Kind() != reflect.Slice {
+		return nil, fmt.Errorf("Not a slice")
+	}
+
+	s := reflect.ValueOf(d)
+	if n < 0 {
+		n = s.Len()
+	}
+	res := reflect.MakeSlice(reflect.TypeOf(d), 0, 0)
+	for i := 0; i < n; i++ {
+		a := rand.Intn(s.Len())
+		res = reflect.Append(res, s.Index(a))
+	}
+	return res.Interface(), nil
+
+}
+
 //Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
 func NewPowerTemplate(glob string, root string) *PowerTemplate {
 	//Todo assign Sharer elsewhere
@@ -81,6 +102,7 @@ func NewPowerTemplate(glob string, root string) *PowerTemplate {
 		"md":        mdParse,
 		"jsonMenu":  jsonMenu,
 		"bSelect":   boolSelect,
+		"getN":      getN,
 	}
 
 	blobMap, killer := blob.SafeBlobFuncs(root)
