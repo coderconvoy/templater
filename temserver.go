@@ -7,6 +7,7 @@ import (
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -15,23 +16,6 @@ import (
 type Loose struct {
 	FileName string
 	Style    string
-}
-
-var templates *tempower.PowerTemplate
-
-func tryTemplate(w io.Writer, p string, data interface{}) error {
-	b := new(bytes.Buffer)
-	for i := 0; i < 10; i++ {
-		err := templates.ExecuteTemplate(b, p, data)
-		if err == nil {
-			w.Write(b.Bytes())
-			return nil
-		}
-		if err != blob.DeadBlob() {
-			return err
-		}
-	}
-	return fmt.Errorf("Tried too many times to access blob")
 }
 
 func bigHandler(w http.ResponseWriter, r *http.Request) {
@@ -101,39 +85,9 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func editToTLS(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasPrefix(r.URL.Path, "/edit/") && (r.URL.Path != "/edit") {
-		bigHandler(w, r)
-		return
-	}
-
-	h := r.URL.Host
-	if h != "" {
-		http.Redirect(w, r, "https://"+r.URL.Host+"/edit", 301)
-		return
-	}
-
-	fmt.Fprintf(w, "please replace http with https in link")
-
-}
-
-type EditHandle struct{}
-
-func (eh *EditHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasPrefix(r.URL.Path, "/edit/") && (r.URL.Path != "/edit") {
-
-		bigHandler(w, r)
-		return
-	}
-	fmt.Fprintf(w, "Hello tls")
-
-}
-
 func main() {
+	config := flag.String("c", "config.json", "Path to JSON Config file")
 
-	root := flag.String("r", "", "root file path for access to files")
-	port := flag.String("p", "8080", "port to bind to")
-	//tlsport := flag.String("tls", "8430", "Tls Port to bind to")
 	flag.Parse()
 	templates = tempower.NewPowerTemplate(*root+"/templates/*.html", *root)
 
@@ -143,9 +97,16 @@ func main() {
 	http.HandleFunc("/", editToTLS)
 
 	fmt.Println("Started")
-	http.ListenAndServe(":"+*port, nil)
 
-	//err := http.ListenAndServeTLS(":"+*tlsport, "/home/matthew/keys/local.crt", "/home/matthew/keys/local.key", &EditHandle{})
-	//fmt.Println(err)
+	ready := make(chan Error)
+
+	go temkiller(*config, ready)
+	err := <-ready
+
+	if a != nil {
+		log.Fatal(err)
+	}
+
+	http.ListenAndServe(":"+*port, nil)
 
 }
