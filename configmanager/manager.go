@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
+	"path"
 
 	"io"
 	"io/ioutil"
@@ -21,18 +22,41 @@ type configItem struct {
 }
 
 type Manager struct {
-	allTemplates map[string]*tempower.PowerTemplate
-	config       []configItem
+	filename string
+	tmap     map[string]*tempower.PowerTemplate
+	config   []configItem
+	killchan chan bool
 	sync.Mutex
 }
 
 func NewManager(cFileName string) (*Manager, error) {
-	_, err := loadConfig(cFileName)
+	c, err := loadConfig(cFileName)
 	if err != nil {
 		return nil, err
 	}
-	return nil, err
 
+	temps := make(map[string]*tempower.PowerTemplate)
+
+	for _, v := range c {
+		t, ok := temps[v.Folder]
+		if !ok {
+			t, err = tempower.NewPowerTemplate(path.Join(v.Folder, "templates/*.*"), v.Folder)
+			if err == nil {
+				temps[v.Folder] = t
+			}
+		}
+	}
+
+	res := &Manager{
+		filename: cFileName,
+		config:   c,
+		tmap:     temps,
+		killchan: make(chan bool),
+	}
+
+	go manageTemplates(res)
+
+	return res, nil
 }
 
 func loadConfig(fName string) ([]configItem, error) {
@@ -50,22 +74,25 @@ func loadConfig(fName string) ([]configItem, error) {
 	return configs, nil
 }
 
-func manageTemplates(man *Manager, configFName string, redy chan error) {
+func manageTemplates(man *Manager) {
+
 	var lastCheck time.Time
 	var thisCheck time.Time
 
 	for {
 		//if config has been updated update.
 		thisCheck = time.Now()
-		fi, err := os.Stat(configFName)
+		fi, err := os.Stat(man.filename)
 		if err != nil {
 			if fi.ModTime().After(lastCheck) {
-
 			}
 		}
 
+		select {
+		case _ = <-man.killchan:
+			return
+		}
 		//for each file look at modified file if changed update.
-
 		lastCheck = thisCheck
 		time.Sleep(time.Minute)
 	}
@@ -75,9 +102,9 @@ func manageTemplates(man *Manager, configFName string, redy chan error) {
 func (man *Manager) getTemplate(rootF string) *tempower.PowerTemplate {
 	man.Lock()
 	defer man.Unlock()
-	t, ok := man.allTemplates[rootF]
+	t, ok := man.tmap[rootF]
 	if !ok {
-		t, ok = man.allTemplates["default"]
+		t, ok = man.tmap["default"]
 	}
 	return t
 
@@ -100,5 +127,10 @@ func (man *Manager) tryTemplate(w io.Writer, rootF string, p string, data interf
 			return err
 		}
 	}
+
 	return fmt.Errorf("Tried too many times to access blob")
+}
+
+func (man *Manager) kill() {
+	man.killchan <- true
 }

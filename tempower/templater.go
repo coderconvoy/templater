@@ -108,7 +108,7 @@ func getN(n int, d interface{}) (interface{}, error) {
 }
 
 //Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, root string) *PowerTemplate {
+func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	//Todo assign Sharer elsewhere
 
 	t := template.New("")
@@ -129,9 +129,9 @@ func NewPowerTemplate(glob string, root string) *PowerTemplate {
 	t, err := t.ParseGlob(glob)
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		return nil, err
 	}
-	return &PowerTemplate{t, killer}
+	return &PowerTemplate{t, killer}, nil
 
 }
 
