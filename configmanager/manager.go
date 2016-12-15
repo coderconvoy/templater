@@ -25,7 +25,7 @@ type Manager struct {
 	filename string
 	tmap     map[string]*tempower.PowerTemplate
 	config   []configItem
-	killchan chan bool
+	killflag bool
 	sync.Mutex
 }
 
@@ -51,7 +51,7 @@ func NewManager(cFileName string) (*Manager, error) {
 		filename: cFileName,
 		config:   c,
 		tmap:     temps,
-		killchan: make(chan bool),
+		killflag: false,
 	}
 
 	go manageTemplates(res)
@@ -80,16 +80,25 @@ func manageTemplates(man *Manager) {
 	var thisCheck time.Time
 
 	for {
-		//if config has been updated update.
+		//if config has been updated update all folders.
 		thisCheck = time.Now()
 		fi, err := os.Stat(man.filename)
 		if err != nil {
 			if fi.ModTime().After(lastCheck) {
+				newcon, err := loadConfig(man.filename)
+				if err != nil {
+					man.Lock()
+
+					man.Unlock()
+				} else {
+					fmt.Println("Load Config Error:", err)
+				}
 			}
 		}
 
-		select {
-		case _ = <-man.killchan:
+		//check folders for update
+
+		if man.killflag {
 			return
 		}
 		//for each file look at modified file if changed update.
@@ -131,6 +140,13 @@ func (man *Manager) tryTemplate(w io.Writer, rootF string, p string, data interf
 	return fmt.Errorf("Tried too many times to access blob")
 }
 
-func (man *Manager) kill() {
-	man.killchan <- true
+func (man *Manager) Kill() {
+	man.Lock()
+	defer man.Unlock()
+
+	man.killflag = true
+	//TODO loop through and kill all templates
+	for _, v := range man.tmap {
+		v.Kill()
+	}
 }

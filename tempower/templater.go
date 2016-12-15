@@ -17,6 +17,10 @@ type PowerTemplate struct {
 	killer func()
 }
 
+func (pt PowerTemplate) Kill() {
+	pt.killer()
+}
+
 /*
    For use inside templates: Converts text sent from one template to another into a map whcih can then be accessed by {{ index }}
 */
