@@ -29,23 +29,30 @@ type Manager struct {
 	sync.Mutex
 }
 
+func newTMap(conf []configItem) map[string]*tempower.PowerTemplate {
+	var err error
+	res := make(map[string]*tempower.PowerTemplate)
+
+	for _, v := range conf {
+		t, ok := res[v.Folder]
+		if !ok {
+			t, err = tempower.NewPowerTemplate(path.Join(v.Folder, "templates/*.*"), v.Folder)
+			if err == nil {
+				res[v.Folder] = t
+			}
+		}
+	}
+	return res
+
+}
+
 func NewManager(cFileName string) (*Manager, error) {
 	c, err := loadConfig(cFileName)
 	if err != nil {
 		return nil, err
 	}
 
-	temps := make(map[string]*tempower.PowerTemplate)
-
-	for _, v := range c {
-		t, ok := temps[v.Folder]
-		if !ok {
-			t, err = tempower.NewPowerTemplate(path.Join(v.Folder, "templates/*.*"), v.Folder)
-			if err == nil {
-				temps[v.Folder] = t
-			}
-		}
-	}
+	temps := newTMap(c)
 
 	res := &Manager{
 		filename: cFileName,
@@ -80,24 +87,40 @@ func manageTemplates(man *Manager) {
 	var thisCheck time.Time
 
 	for {
-		//if config has been updated update all folders.
 		thisCheck = time.Now()
+
+		//if config has been updated then reset everything
 		fi, err := os.Stat(man.filename)
 		if err != nil {
 			if fi.ModTime().After(lastCheck) {
+				fmt.Println("Config File Changed")
 				newcon, err := loadConfig(man.filename)
 				if err != nil {
+					oldmap := man.tmap
 					man.Lock()
-
+					man.config = newcon
+					man.tmap = newTMap(man.config)
 					man.Unlock()
+
+					for _, v := range oldmap {
+						v.Kill()
+					}
+
 				} else {
+					//ignore the change
 					fmt.Println("Load Config Error:", err)
 				}
 			}
 		}
 
-		//check folders for update
+		//check folders for update only update the changed
+		for _, _ := range man.config {
 
+			//todo fix lots to loop on map of struct
+
+		}
+
+		//Allow kill
 		if man.killflag {
 			return
 		}
