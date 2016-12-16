@@ -8,7 +8,6 @@ import (
 	"github.com/russross/blackfriday"
 	"io"
 	"math/rand"
-	"path"
 	"path/filepath"
 	"reflect"
 	"text/template"
@@ -140,10 +139,10 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	ar2 := make([]string, 0, 0)
 
 	for _, v := range globArr {
-		d, f := filepath.Split(v)
+		_, f := filepath.Split(v)
 		if len(f) > 0 {
 			if f[0] != '.' {
-				ar2 = append(ar2, path.Join(d, f))
+				ar2 = append(ar2, v)
 			}
 		}
 	}
