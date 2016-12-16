@@ -1,4 +1,4 @@
-package templater
+package main
 
 import (
 	"net/http"
@@ -20,4 +20,5 @@ func (self rr) Write(b []byte) (int, error) {
 }
 
 func Test_Writer(t *testing.T) {
+
 }

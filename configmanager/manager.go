@@ -10,6 +10,7 @@ import (
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
 	"path"
+	"strings"
 
 	"io"
 	"io/ioutil"
@@ -88,6 +89,19 @@ func (man *Manager) TryTemplate(w io.Writer, host string, p string, data interfa
 	}
 
 	return fmt.Errorf("Tried too many times to access blob")
+}
+
+func (man *Manager) GetFilePath(host, fname string) (string, error) {
+	for _, v := range man.config {
+		if v.Host == host || v.Host == "default" {
+			res := path.Join(v.Folder, fname)
+			if strings.HasPrefix(res, v.Folder) {
+				return res, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Path not reachable")
+
 }
 
 //Kill ends all internal go routines. Do not use the manager after calling Kill()

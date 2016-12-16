@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"github.com/coderconvoy/templater/blob"
-	"github.com/coderconvoy/templater/tempower"
-	"io"
-	"log"
+	"github.com/coderconvoy/templater/configmanager"
 	"net/http"
 	"strings"
 	"time"
@@ -18,8 +14,21 @@ type Loose struct {
 	Style    string
 }
 
+var configMan *configmanager.Manager
+
+func staticFiles(w http.ResponseWriter, r *http.Request) {
+	fPath, err := configMan.GetFilePath(r.URL.Host, r.URL.Path)
+
+	if err != nil {
+		w.Write([]byte("Bad File Request"))
+	}
+
+	http.ServeFile(w, r, fPath)
+}
+
 func bigHandler(w http.ResponseWriter, r *http.Request) {
 	//Handle restyling options with a style cookie
+	host := r.URL.Host
 	styleC, cerr := r.Cookie("style")
 	style := ""
 	if cerr == nil {
@@ -46,7 +55,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	// Empty for index
 
 	if p == "" {
-		err = tryTemplate(w, "index", Loose{"", style})
+		err = configMan.TryTemplate(w, host, "index", Loose{"", style})
 		if err != nil {
 			fmt.Fprintf(w, "Could not load index, err = %s", err)
 			fmt.Printf("Could not load index, err = %s", err)
@@ -60,7 +69,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	//try template
 	for k, v := range p {
 		if v == '/' {
-			err = tryTemplate(w, p[:k], Loose{p[k+1:], style})
+			err = configMan.TryTemplate(w, host, p[:k], Loose{p[k+1:], style})
 
 			if err == nil {
 				return
@@ -68,7 +77,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 			errs = append(errs, err)
 		}
 	}
-	err = tryTemplate(w, p, Loose{"", style})
+	err = configMan.TryTemplate(w, host, p, Loose{"", style})
 	if err == nil {
 		return
 	}
@@ -76,7 +85,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 	//Default
 	fmt.Println(errs)
-	err = tryTemplate(w, "loose", Loose{p + ".md", style})
+	err = configMan.TryTemplate(w, host, "loose", Loose{p + ".md", style})
 	if err != nil {
 		fmt.Println(err)
 		fmt.Fprintln(w, err)
@@ -87,25 +96,22 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	config := flag.String("c", "config.json", "Path to JSON Config file")
+	port := flag.String("p", "80", "Port")
 
 	flag.Parse()
-	templates = tempower.NewPowerTemplate(*root+"/templates/*.html", *root)
+	var err error
 
-	fs := http.FileServer(http.Dir(*root + "/s"))
-	http.Handle("/s/", http.StripPrefix("/s/", fs))
+	configMan, err = configmanager.NewManager(*config)
+	if err != nil {
+		fmt.Println("config error:", err)
+		return
+	}
 
-	http.HandleFunc("/", editToTLS)
+	http.HandleFunc("/s/", staticFiles)
+
+	http.HandleFunc("/", bigHandler)
 
 	fmt.Println("Started")
-
-	ready := make(chan Error)
-
-	go temkiller(*config, ready)
-	err := <-ready
-
-	if a != nil {
-		log.Fatal(err)
-	}
 
 	http.ListenAndServe(":"+*port, nil)
 
