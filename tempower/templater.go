@@ -8,6 +8,8 @@ import (
 	"github.com/russross/blackfriday"
 	"io"
 	"math/rand"
+	"path"
+	"path/filepath"
 	"reflect"
 	"text/template"
 )
@@ -130,7 +132,22 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 		fMap[k] = v
 	}
 	t = t.Funcs(fMap)
-	t, err := t.ParseGlob(glob)
+
+	globArr, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
+	}
+	ar2 := make([]string, 0, 0)
+
+	for _, v := range globArr {
+		d, f := filepath.Split(v)
+		if len(f) > 0 {
+			if f[0] != '.' {
+				ar2 = append(ar2, path.Join(d, f))
+			}
+		}
+	}
+	t, err = t.ParseFiles(ar2...)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err

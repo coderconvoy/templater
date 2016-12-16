@@ -5,7 +5,7 @@ import (
 )
 
 func Test_templater1(t *testing.T) {
-	_ = NewPowerTemplate("test_data/*.html", "test_data")
+	_, _ = NewPowerTemplate("test_data/*.html", "test_data")
 }
 
 func Test_getN(t *testing.T) {
