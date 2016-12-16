@@ -1,12 +1,13 @@
 [
     {
         "Host":"",
-        "Folder":"/home/matthew/scripts/websites/storyfeet/",
-        "Modifier":"modified"
+        "Folder":"test_data/b1",
+        "Modify":"modified"
     },
     {
         "Host":"default",
-        "Folder":"/home/matthew/scripts/websites/storyfeet/",
-        "Modifier":"modified"
+        "Folder":"test_data/b1",
+        "Modify":"modified"
     }
 ]
+

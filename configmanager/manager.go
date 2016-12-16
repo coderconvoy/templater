@@ -1,5 +1,6 @@
 //configmanager is a holder for all the separate hosts and the folders they represent.
 //A configuration reads a json file containing an array [] of ConfigItem s
+//If the last 'Host' is 'default' this will be a catch all
 package configmanager
 
 import (
@@ -36,7 +37,7 @@ type ConfigItem struct {
 type Manager struct {
 	filename string
 	tmap     map[string]temroot
-	config   []configItem
+	config   []ConfigItem
 	killflag bool
 	sync.Mutex
 }
@@ -76,7 +77,7 @@ func (man *Manager) TryTemplate(w io.Writer, host string, p string, data interfa
 		if err != nil {
 			return err
 		}
-		err := t.ExecuteTemplate(b, p, data)
+		err = t.ExecuteTemplate(b, p, data)
 		if err == nil {
 			w.Write(b.Bytes())
 			return nil
@@ -100,8 +101,11 @@ func (man *Manager) Kill() {
 		v.templates.Kill()
 	}
 }
+
 func newTemroot(fol, mod string) (temroot, error) {
-	t, err := tempower.NewPowerTemplate(path.Join(fol, "templates/*.*"), fol)
+	tpath := path.Join(fol, "templates/*.*")
+	fmt.Println("New Path = ", tpath)
+	t, err := tempower.NewPowerTemplate(tpath, fol)
 	if err != nil {
 		return temroot{}, err
 	}
@@ -114,7 +118,7 @@ func newTemroot(fol, mod string) (temroot, error) {
 
 }
 
-func newTMap(conf []configItem) map[string]temroot {
+func newTMap(conf []ConfigItem) map[string]temroot {
 	res := make(map[string]temroot)
 
 	for _, v := range conf {
@@ -131,8 +135,8 @@ func newTMap(conf []configItem) map[string]temroot {
 	return res
 }
 
-func loadConfig(fName string) ([]configItem, error) {
-	var configs []configItem
+func loadConfig(fName string) ([]ConfigItem, error) {
+	var configs []ConfigItem
 
 	b, err := ioutil.ReadFile(fName)
 	if err != nil {
@@ -148,7 +152,7 @@ func loadConfig(fName string) ([]configItem, error) {
 
 func manageTemplates(man *Manager) {
 
-	var lastCheck time.Time
+	lastCheck := time.Now()
 	var thisCheck time.Time
 
 	for {
@@ -216,18 +220,14 @@ func manageTemplates(man *Manager) {
 func (man *Manager) getTemplates(host string) (*tempower.PowerTemplate, error) {
 	man.Lock()
 	defer man.Unlock()
-	for i, v := range man.config {
-		if v.Host == host {
+	for _, v := range man.config {
+		if v.Host == host || v.Host == "default" {
 			t, ok := man.tmap[v.Folder]
 			if ok {
 				return t.templates, nil
 			}
 		}
 	}
-	t, ok := man.tmap["default"]
-	if !ok {
-		return nil, fmt.Errorf("No Templates available for host : %s\n", host)
-	}
-	return t.templates, nil
+	return nil, fmt.Errorf("No Templates available for host : %s\n", host)
 
 }
