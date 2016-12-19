@@ -87,12 +87,11 @@ func getN(n int, d interface{}) (interface{}, error) {
 	if n < 0 {
 		n = s.Len()
 	}
-	last := make([]int, 0, 0)
 	res := reflect.MakeSlice(reflect.TypeOf(d), 0, 0)
 	l := s.Len()
 	p := rand.Perm(l)
 	for i := 0; i < n; i++ {
-		res = reflect.Append(res, s.Index(i%l))
+		res = reflect.Append(res, s.Index(p[i%l]))
 
 	}
 
