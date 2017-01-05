@@ -6,16 +6,63 @@ import (
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/parse"
 	"github.com/russross/blackfriday"
-	"io"
+	"io/ioutil"
 	"math/rand"
+	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"text/template"
 )
 
 type PowerTemplate struct {
 	*template.Template
+	root   string
 	killer func()
+}
+
+//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
+func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
+	//Todo assign Sharer elsewhere
+
+	t := template.New("")
+	fMap := template.FuncMap{
+		"tDict":     tDict,
+		"randRange": RandRange,
+		"md":        mdParse,
+		"jsonMenu":  jsonMenu,
+		"bSelect":   boolSelect,
+		"getN":      getN,
+		"getFile":   fileGetter(root),
+	}
+
+	blobMap, killer := blob.SafeBlobFuncs(root)
+	for k, v := range blobMap {
+		fMap[k] = v
+	}
+	t = t.Funcs(fMap)
+
+	globArr, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
+	}
+	ar2 := make([]string, 0, 0)
+
+	for _, v := range globArr {
+		_, f := filepath.Split(v)
+		if len(f) > 0 {
+			if f[0] != '.' {
+				ar2 = append(ar2, v)
+			}
+		}
+	}
+	t, err = t.ParseFiles(ar2...)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return &PowerTemplate{t, root, killer}, nil
+
 }
 
 func (pt PowerTemplate) Kill() {
@@ -76,6 +123,7 @@ func jsonMenu(d interface{}) (string, error) {
 
 }
 
+//Select n random non repeating elements from slice d  returns error on d not slice
 func getN(n int, d interface{}) (interface{}, error) {
 	//TODO consider adding support for maps
 
@@ -99,56 +147,13 @@ func getN(n int, d interface{}) (interface{}, error) {
 
 }
 
-//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
-	//Todo assign Sharer elsewhere
-
-	t := template.New("")
-	fMap := template.FuncMap{
-		"tDict":     tDict,
-		"randRange": RandRange,
-		"md":        mdParse,
-		"jsonMenu":  jsonMenu,
-		"bSelect":   boolSelect,
-		"getN":      getN,
-	}
-
-	blobMap, killer := blob.SafeBlobFuncs(root)
-	for k, v := range blobMap {
-		fMap[k] = v
-	}
-	t = t.Funcs(fMap)
-
-	globArr, err := filepath.Glob(glob)
-	if err != nil {
-		return nil, err
-	}
-	ar2 := make([]string, 0, 0)
-
-	for _, v := range globArr {
-		_, f := filepath.Split(v)
-		if len(f) > 0 {
-			if f[0] != '.' {
-				ar2 = append(ar2, v)
-			}
+//Safelyfinds file from local scope
+func fileGetter(root string) func(string) ([]byte, error) {
+	return func(fname string) ([]byte, error) {
+		p := path.Join(root, fname)
+		if !strings.HasPrefix(root, p) {
+			return []byte{}, fmt.Errorf("No upward pathing")
 		}
-	}
-	t, err = t.ParseFiles(ar2...)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	return &PowerTemplate{t, killer}, nil
-
-}
-
-/*
-   This is a lazy Execution method. This will write the io.Writer with the execution of the template. It handles any error, by both writing it to the User, and also to std out.
-*/
-func Exec(t *template.Template, w io.Writer, tName string, data interface{}) {
-	err := t.ExecuteTemplate(w, tName, data)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Fprintln(w, err)
+		return ioutil.ReadFile(p)
 	}
 }
