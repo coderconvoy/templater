@@ -48,10 +48,18 @@ func (bd ByDateDown) Len() int           { return len(bd) }
 func (bd ByDateDown) Less(a, b int) bool { return bd[b].Date.Before(bd[a].Date) }
 func (bd ByDateDown) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
 
-func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
+func (bd ByName) Len() int           { return len(bd) }
+func (bd ByName) Less(a, b int) bool { return bd[b].FName > bd[a].FName }
+func (bd ByName) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
+
+func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
+	if sortBy != name {
+		sortBy = "date"
+	}
 
 	fol = path.Join(bs.root, fol)
-	if res, ok := bs.m[fol]; ok {
+	store = sortBy + "#" + fol
+	if res, ok := bs.m[store]; ok {
 		return res, nil
 	}
 
@@ -94,9 +102,13 @@ func (bs *BlobSet) GetDir(fol string) ([]PageInfo, error) {
 		f.Close()
 	}
 
-	sort.Sort(ByDateDown(res))
+	if sortBy == "name" {
+		sort.Sort(ByName(res))
+	} else {
+		sort.Sort(ByDateDown(res))
+	}
 
-	bs.m[fol] = res
+	bs.m[store] = res
 
 	return res, nil
 }
