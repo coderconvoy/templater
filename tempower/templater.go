@@ -33,11 +33,15 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 		"jsonMenu":  jsonMenu,
 		"bSelect":   boolSelect,
 		"getN":      getN,
-		"getFile":   fileGetter(root),
 	}
 
-	blobMap, killer := blob.SafeBlobFuncs(root)
-	for k, v := range blobMap {
+	tMap := fileGetter(root)
+	for k, v := range tMap {
+		fMap[k] = v
+	}
+
+	tMap, killer := blob.SafeBlobFuncs(root)
+	for k, v := range tMap {
 		fMap[k] = v
 	}
 	t = t.Funcs(fMap)
@@ -148,12 +152,48 @@ func getN(n int, d interface{}) (interface{}, error) {
 }
 
 //Safelyfinds file from local scope
-func fileGetter(root string) func(string) ([]byte, error) {
-	return func(fname string) ([]byte, error) {
+func fileGetter(root string) template.FuncMap {
+	getFile := func(fname string) ([]byte, error) {
 		p := path.Join(root, fname)
-		if !strings.HasPrefix(root, p) {
+		if !strings.HasPrefix(p, root) {
 			return []byte{}, fmt.Errorf("No upward pathing")
 		}
 		return ioutil.ReadFile(p)
+	}
+
+	mdFile := func(fname string) (string, error) {
+		f, err := getFile(fname)
+		if err != nil {
+			return "", err
+		}
+		return mdParse(f), nil
+	}
+
+	getHeadedFile := func(fname string) (map[string]string, error) {
+		f, err := getFile(fname)
+		if err != nil {
+			return map[string]string{}, err
+		}
+		return parse.Headed(f), nil
+	}
+
+	getHeadedMDFile := func(fname string) (map[string]string, error) {
+		m, err := getHeadedFile(fname)
+		if err != nil {
+			return m, err
+		}
+		c, ok := m["contents"]
+		if !ok {
+			return m, fmt.Errorf("No Contents")
+		}
+		m["md"] = mdParse(c)
+		return m, nil
+	}
+
+	return template.FuncMap{
+		"File":         getFile,
+		"mdFile":       mdFile,
+		"headedFile":   getHeadedFile,
+		"headedMDFile": getHeadedMDFile,
 	}
 }

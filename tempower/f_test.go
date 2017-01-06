@@ -1,6 +1,8 @@
 package tempower
 
 import (
+	"github.com/coderconvoy/templater/parse"
+	"io/ioutil"
 	"testing"
 )
 
@@ -16,4 +18,28 @@ func Test_getN(t *testing.T) {
 		t.Logf("Len c == %d, expected 4.\n", len(cd))
 		t.Fail()
 	}
+}
+
+func Test_getFile(t *testing.T) {
+	fmap := fileGetter("test_data/getfile/")
+
+	getHMD := fmap["headedMDFile"].(func(string) (map[string]string, error))
+
+	hmd, err := getHMD("popple.md")
+	if err != nil {
+		t.Log("popple not loaded", err)
+		t.Fail()
+	}
+
+	popf, _ := ioutil.ReadFile("test_data/getfile/popple.md")
+	popmap := parse.Headed(popf)
+	popmap["md"] = mdParse(popmap["contents"])
+
+	for k, v := range popmap {
+		if v != hmd[k] {
+			t.Logf("%s, not equal\nexpected: %s\ngot: %s\n", k, v, hmd[k])
+			t.Fail()
+		}
+	}
+
 }
