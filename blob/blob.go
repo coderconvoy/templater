@@ -43,6 +43,7 @@ func DeadBlob() error {
 }
 
 type ByDateDown []PageInfo
+type ByName []PageInfo
 
 func (bd ByDateDown) Len() int           { return len(bd) }
 func (bd ByDateDown) Less(a, b int) bool { return bd[b].Date.Before(bd[a].Date) }
@@ -53,12 +54,12 @@ func (bd ByName) Less(a, b int) bool { return bd[b].FName > bd[a].FName }
 func (bd ByName) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
 
 func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
-	if sortBy != name {
+	if sortBy != "name" {
 		sortBy = "date"
 	}
 
 	fol = path.Join(bs.root, fol)
-	store = sortBy + "#" + fol
+	store := sortBy + "#" + fol
 	if res, ok := bs.m[store]; ok {
 		return res, nil
 	}
@@ -113,8 +114,8 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 	return res, nil
 }
 
-func (bs *BlobSet) GetBlob(fol, file string) map[string]string {
-	infos, err := bs.GetDir(fol)
+func (bs *BlobSet) GetBlob(fol, file, sortMode string) map[string]string {
+	infos, err := bs.GetDir(fol, sortMode)
 	if err != nil {
 		return map[string]string{}
 	}
@@ -202,10 +203,15 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 		err error
 	}
 
-	getAll := func(fol string) ([]PageInfo, error) {
+	getAll := func(fol string, sortMode ...string) ([]PageInfo, error) {
+		sm := "date"
+		if len(sortMode) > 0 {
+			sm = sortMode[0]
+		}
+
 		bchan := make(chan backinfo)
 		err := runner(func(bs *BlobSet) {
-			bi, er := bs.GetDir(fol)
+			bi, er := bs.GetDir(fol, sm)
 			res := backinfo{bi, er}
 			bchan <- res
 		})
@@ -217,10 +223,14 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 		return res.pi, res.err
 	}
 
-	getOne := func(fol, file string) (map[string]string, error) {
+	getOne := func(fol, file string, sortMode ...string) (map[string]string, error) {
+		sm := "date"
+		if len(sortMode) > 0 {
+			sm = sortMode[0]
+		}
 		bchan := make(chan map[string]string)
 		err := runner(func(bs *BlobSet) {
-			bchan <- bs.GetBlob(fol, file)
+			bchan <- bs.GetBlob(fol, file, sm)
 		})
 		if err != nil {
 			return nil, err
@@ -229,8 +239,8 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 
 	}
 
-	getOneMD := func(fol, file string) (map[string]string, error) {
-		res, err := getOne(fol, file)
+	getOneMD := func(fol, file string, sortMode ...string) (map[string]string, error) {
+		res, err := getOne(fol, file, sortMode...)
 		if err != nil {
 			return nil, err
 		}
@@ -239,8 +249,8 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 
 	}
 
-	getContent := func(fol, file string) (string, error) {
-		res, err := getOne(fol, file)
+	getContent := func(fol, file string, sortMode ...string) (string, error) {
+		res, err := getOne(fol, file, sortMode...)
 		if err != nil {
 			return "", err
 		}

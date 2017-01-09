@@ -42,4 +42,10 @@ func Test_getFile(t *testing.T) {
 		}
 	}
 
+	_, err = getHMD("p/../../poop.html")
+	if err == nil {
+		t.Logf("Reached out of locked directory for poop.html")
+		t.Fail()
+	}
+
 }
