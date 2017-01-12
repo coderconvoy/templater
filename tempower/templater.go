@@ -190,6 +190,7 @@ func fileGetter(root string) template.FuncMap {
 		return m, nil
 	}
 
+	//TODO add getFileS and "FileS"
 	return template.FuncMap{
 		"File":         getFile,
 		"mdFile":       mdFile,
