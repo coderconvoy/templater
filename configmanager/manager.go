@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
+	"github.com/coderconvoy/templater/timestamp"
 	"path"
 	"strings"
 
 	"io"
 	"io/ioutil"
-	"os"
 	"sync"
 	"time"
 )
@@ -173,9 +173,10 @@ func manageTemplates(man *Manager) {
 		thisCheck = time.Now()
 
 		//if config has been updated then reset everything
-		fi, err := os.Stat(man.filename)
+		ts, err := timestamp.GetMod(man.filename)
 		if err == nil {
-			if fi.ModTime().After(lastCheck) {
+
+			if ts.After(lastCheck) {
 				fmt.Println("Config File Changed")
 				newcon, err := loadConfig(man.filename)
 				if err == nil {
@@ -199,9 +200,11 @@ func manageTemplates(man *Manager) {
 		//check folders for update only update the changed
 		for k, v := range man.tmap {
 			modpath := path.Join(v.root, v.modifier)
-			fi, err := os.Stat(modpath)
+			ts, err := timestamp.GetMod(modpath)
 			if err == nil {
-				if fi.ModTime().After(lastCheck) {
+				//chaT := fi.ChangeTime()
+				fmt.Println("modify %s", ts.Unix())
+				if ts.After(lastCheck) {
 					t, err2 := newTemroot(v.root, v.modifier)
 					if err2 == nil {
 						man.Lock()
@@ -226,7 +229,7 @@ func manageTemplates(man *Manager) {
 		}
 		//for each file look at modified file if changed update.
 		lastCheck = thisCheck
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute / 2)
 	}
 
 }
