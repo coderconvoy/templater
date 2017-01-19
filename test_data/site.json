@@ -2,6 +2,6 @@
     {
         "Host":"default",
         "Folder":"test_data/site",
-        "Modify":"modified"
+        "Modifier":"modify"
     }
 ]

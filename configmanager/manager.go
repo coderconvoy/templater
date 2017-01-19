@@ -37,7 +37,7 @@ type ConfigItem struct {
 
 type Manager struct {
 	filename string
-	tmap     map[string]temroot
+	tmap     map[string]*temroot
 	config   []ConfigItem
 	killflag bool
 	sync.Mutex
@@ -132,15 +132,15 @@ func newTemroot(fol, mod string) (temroot, error) {
 
 }
 
-func newTMap(conf []ConfigItem) map[string]temroot {
-	res := make(map[string]temroot)
+func newTMap(conf []ConfigItem) map[string]*temroot {
+	res := make(map[string]*temroot)
 
 	for _, v := range conf {
 		_, ok := res[v.Folder]
 		if !ok {
 			t, err := newTemroot(v.Folder, v.Modifier)
 			if err == nil {
-				res[v.Folder] = t
+				res[v.Folder] = &t
 			} else {
 				fmt.Printf("Could not load templates :%s,%s", v.Folder, err)
 			}
@@ -202,14 +202,14 @@ func manageTemplates(man *Manager) {
 			modpath := path.Join(v.root, v.modifier)
 			ts, err := timestamp.GetMod(modpath)
 			if err == nil {
-				//chaT := fi.ChangeTime()
-				fmt.Println("modify %s", ts.Unix())
-				if ts.After(lastCheck) {
+				fmt.Printf("modify %s\n", ts.Format("2006 01 02 15:04:05 -0700 MST 2006"))
+				if ts.After(v.last) {
 					t, err2 := newTemroot(v.root, v.modifier)
 					if err2 == nil {
 						man.Lock()
-						man.tmap[k] = t
+						man.tmap[k] = &t
 						v.templates.Kill()
+						v.last = ts
 						man.Unlock()
 					} else {
 						fmt.Printf("ERROR , Could not parse templates Using old ones: %s,%s\n", modpath, err2)

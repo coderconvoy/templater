@@ -1,14 +1,20 @@
-// +build linux
-
 package timestamp
 
 import (
 	"os"
-	"syscall"
 	"time"
 )
 
 func GetMod(fname string) (time.Time, error) {
+	fi, err := os.Stat(fname)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return fi.ModTime(), nil
+}
+
+//Linux only, get any access
+/*func GetMod(fname string) (time.Time, error) {
 	fi, err := os.Stat(fname)
 	if err != nil {
 		return time.Time{}, err
@@ -27,4 +33,4 @@ func GetMod(fname string) (time.Time, error) {
 	}
 	return cTime, nil
 
-}
+}*/
