@@ -49,3 +49,56 @@ func Test_getFile(t *testing.T) {
 	}
 
 }
+
+func Test_filtercontains(t *testing.T) {
+	td := []string{
+		"hello",
+		"loeh",
+		"kol",
+		"lop",
+	}
+	loRes := filterContains(td, "lo")
+	loExp := []string{
+		"hello",
+		"loeh",
+		"lop",
+	}
+	if len(loRes) != len(loExp) {
+		t.Logf("lo - expected len %d, got len %d\n", len(loExp), len(loRes))
+		t.FailNow()
+	}
+	for k, v := range loExp {
+		if loRes[k] != v {
+			t.Logf("lo - expected %s, got %s\n", v, loRes[k])
+			t.Fail()
+		}
+	}
+
+}
+
+func Test_multireplace(t *testing.T) {
+	td := []string{
+		"hello",
+		"loeh",
+		"kol",
+		"lop",
+	}
+	loRes := multiReplace(td, "lo", "kk", -1)
+	loExp := []string{
+		"helkk",
+		"kkeh",
+		"kol",
+		"kkp",
+	}
+	if len(loRes) != len(loExp) {
+		t.Logf("lo - expected len %d, got len %d\n", len(loExp), len(loRes))
+		t.FailNow()
+	}
+	for k, v := range loExp {
+		if loRes[k] != v {
+			t.Logf("lo - expected %s, got %s\n", v, loRes[k])
+			t.Fail()
+		}
+	}
+
+}

@@ -27,12 +27,16 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 
 	t := template.New("")
 	fMap := template.FuncMap{
-		"tDict":     tDict,
-		"randRange": RandRange,
-		"md":        mdParse,
-		"jsonMenu":  jsonMenu,
-		"bSelect":   boolSelect,
-		"getN":      getN,
+		"tDict":          tDict,
+		"randRange":      RandRange,
+		"md":             mdParse,
+		"jsonMenu":       jsonMenu,
+		"bSelect":        boolSelect,
+		"getN":           getN,
+		"contains":       strings.Contains,
+		"filterContains": filterContains,
+		"replace":        strings.Replace,
+		"multiReplace":   multiReplace,
 	}
 
 	tMap := fileGetter(root)
@@ -148,6 +152,26 @@ func getN(n int, d interface{}) (interface{}, error) {
 	}
 
 	return res.Interface(), nil
+
+}
+
+func filterContains(l []string, sub string) []string {
+	res := []string{}
+	for _, v := range l {
+		if strings.Contains(v, sub) {
+			res = append(res, v)
+		}
+	}
+	return res
+}
+
+// Make availble replace to users
+func multiReplace(l []string, from, to string, n int) []string {
+	res := make([]string, len(l))
+	for i, v := range l {
+		res[i] = strings.Replace(v, from, to, n)
+	}
+	return res
 
 }
 
