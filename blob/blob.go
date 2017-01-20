@@ -223,6 +223,19 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 		return res.pi, res.err
 	}
 
+	getAllNames := func(fol string, sortMode ...string) ([]string, error) {
+		a, err := getAll(fol, sortMode...)
+		if err != nil {
+			return []string{}, err
+		}
+		res := make([]string, len(a))
+		for k, v := range a {
+			res[k] = v.FName
+		}
+		return res, nil
+
+	}
+
 	getOne := func(fol, file string, sortMode ...string) (map[string]string, error) {
 		sm := "date"
 		if len(sortMode) > 0 {
@@ -259,9 +272,10 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 	}
 
 	return template.FuncMap{
-		"getblobdir": getAll,
-		"getblob":    getOne,
-		"getblobMD":  getOneMD,
-		"getblobc":   getContent,
+		"getblobdir":   getAll,
+		"getblobnames": getAllNames,
+		"getblob":      getOne,
+		"getblobMD":    getOneMD,
+		"getblobc":     getContent,
 	}
 }
