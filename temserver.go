@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/coderconvoy/templater/configmanager"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/coderconvoy/templater/configmanager"
 )
 
 type Loose struct {
