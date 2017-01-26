@@ -78,7 +78,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 			errs = append(errs, err)
 		}
 	}
-	err = configMan.TryTemplate(w, host, p, Loose{"", style})
+	err = configMan.TryTemplate(w, host, p, Loose{p, style})
 	if err == nil {
 		return
 	}

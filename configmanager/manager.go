@@ -202,7 +202,6 @@ func manageTemplates(man *Manager) {
 			modpath := path.Join(v.root, v.modifier)
 			ts, err := timestamp.GetMod(modpath)
 			if err == nil {
-				fmt.Printf("modify %s\n", ts.Format("2006 01 02 15:04:05 -0700 MST 2006"))
 				if ts.After(v.last) {
 					t, err2 := newTemroot(v.root, v.modifier)
 					if err2 == nil {
