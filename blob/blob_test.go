@@ -9,7 +9,7 @@ import (
 func Test_Loader(t *testing.T) {
 	bs := NewBlobSet("test_data")
 
-	recs, err := bs.GetDir("s")
+	recs, err := bs.GetDir("s", "")
 	if err != nil {
 		t.Log("Get Error")
 		t.FailNow()
@@ -28,7 +28,7 @@ func Test_Loader(t *testing.T) {
 func TestChannelAccess(t *testing.T) {
 	fm, killer := SafeBlobFuncs("test_data")
 
-	pinf, err := fm["getblobdir"].(func(string) ([]PageInfo, error))("s")
+	pinf, err := fm["getblobdir"].(func(string, ...string) ([]PageInfo, error))("s")
 	if err != nil {
 		t.Logf("Chan Err:%s", err)
 		t.FailNow()
@@ -38,7 +38,7 @@ func TestChannelAccess(t *testing.T) {
 		t.Fail()
 	}
 
-	getblob := fm["getblob"].(func(string, string) (map[string]string, error))
+	getblob := fm["getblob"].(func(string, string, ...string) (map[string]string, error))
 	mp, err := getblob("s", "purple.md")
 	if err != nil {
 		t.Log("getblob1 error back")
@@ -64,4 +64,24 @@ func test_ReadDir(t *testing.T) {
 	for _, v := range d {
 		fmt.Println(v.Name())
 	}
+}
+
+func Test_GetNames(t *testing.T) {
+	fm, _ := SafeBlobFuncs("test_data")
+
+	f := fm["getblobnames"].(func(string, ...string) ([]string, error))
+
+	r, err := f("s")
+	if err != nil {
+		t.Logf("Error on read s, %s\n", err)
+		t.FailNow()
+	}
+	if len(r) != 3 {
+		t.Logf("Expected 3 members, got %d", len(r))
+		t.FailNow()
+	}
+	for _, v := range r {
+		fmt.Println(v)
+	}
+
 }

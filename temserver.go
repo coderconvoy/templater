@@ -30,7 +30,7 @@ func staticFiles(w http.ResponseWriter, r *http.Request) {
 
 func bigHandler(w http.ResponseWriter, r *http.Request) {
 	//Handle restyling options with a style cookie
-	host := r.URL.Host
+	host := r.Host
 	styleC, cerr := r.Cookie("style")
 	style := ""
 	if cerr == nil {
@@ -53,11 +53,12 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	p := strings.TrimPrefix(r.URL.Path, "/")
 
+	fmt.Println("Host---", host)
 	fmt.Println("Path---", p)
 	// Empty for index
 
 	if p == "" {
-		err = configMan.TryTemplate(w, host, "index", Loose{"", style})
+		err = configMan.TryTemplate(w, host, "index", Loose{"index.md", style})
 		if err != nil {
 			fmt.Fprintf(w, "Could not load index, err = %s", err)
 			fmt.Printf("Could not load index, err = %s", err)
@@ -85,7 +86,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 			errs = append(errs, err)
 		}
 	}
-	err = configMan.TryTemplate(w, host, p, Loose{"", style})
+	err = configMan.TryTemplate(w, host, p, Loose{p, style})
 	if err == nil {
 		return
 	}
