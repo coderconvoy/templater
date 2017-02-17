@@ -6,16 +6,71 @@ import (
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/parse"
 	"github.com/russross/blackfriday"
-	"io"
+	"io/ioutil"
 	"math/rand"
+	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"text/template"
 )
 
 type PowerTemplate struct {
 	*template.Template
+	root   string
 	killer func()
+}
+
+//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
+func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
+	//Todo assign Sharer elsewhere
+
+	t := template.New("")
+	fMap := template.FuncMap{
+		"tDict":          tDict,
+		"randRange":      RandRange,
+		"md":             mdParse,
+		"jsonMenu":       jsonMenu,
+		"bSelect":        boolSelect,
+		"getN":           getN,
+		"contains":       strings.Contains,
+		"filterContains": filterContains,
+		"replace":        strings.Replace,
+		"multiReplace":   multiReplace,
+	}
+
+	tMap := fileGetter(root)
+	for k, v := range tMap {
+		fMap[k] = v
+	}
+
+	tMap, killer := blob.SafeBlobFuncs(root)
+	for k, v := range tMap {
+		fMap[k] = v
+	}
+	t = t.Funcs(fMap)
+
+	globArr, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
+	}
+	ar2 := make([]string, 0, 0)
+
+	for _, v := range globArr {
+		_, f := filepath.Split(v)
+		if len(f) > 0 {
+			if f[0] != '.' {
+				ar2 = append(ar2, v)
+			}
+		}
+	}
+	t, err = t.ParseFiles(ar2...)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return &PowerTemplate{t, root, killer}, nil
+
 }
 
 func (pt PowerTemplate) Kill() {
@@ -76,6 +131,7 @@ func jsonMenu(d interface{}) (string, error) {
 
 }
 
+//Select n random non repeating elements from slice d  returns error on d not slice
 func getN(n int, d interface{}) (interface{}, error) {
 	//TODO consider adding support for maps
 
@@ -99,56 +155,70 @@ func getN(n int, d interface{}) (interface{}, error) {
 
 }
 
-//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
-	//Todo assign Sharer elsewhere
-
-	t := template.New("")
-	fMap := template.FuncMap{
-		"tDict":     tDict,
-		"randRange": RandRange,
-		"md":        mdParse,
-		"jsonMenu":  jsonMenu,
-		"bSelect":   boolSelect,
-		"getN":      getN,
-	}
-
-	blobMap, killer := blob.SafeBlobFuncs(root)
-	for k, v := range blobMap {
-		fMap[k] = v
-	}
-	t = t.Funcs(fMap)
-
-	globArr, err := filepath.Glob(glob)
-	if err != nil {
-		return nil, err
-	}
-	ar2 := make([]string, 0, 0)
-
-	for _, v := range globArr {
-		_, f := filepath.Split(v)
-		if len(f) > 0 {
-			if f[0] != '.' {
-				ar2 = append(ar2, v)
-			}
+func filterContains(l []string, sub string) []string {
+	res := []string{}
+	for _, v := range l {
+		if strings.Contains(v, sub) {
+			res = append(res, v)
 		}
 	}
-	t, err = t.ParseFiles(ar2...)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
+	return res
+}
+
+// Make availble replace to users
+func multiReplace(l []string, from, to string, n int) []string {
+	res := make([]string, len(l))
+	for i, v := range l {
+		res[i] = strings.Replace(v, from, to, n)
 	}
-	return &PowerTemplate{t, killer}, nil
+	return res
 
 }
 
-/*
-   This is a lazy Execution method. This will write the io.Writer with the execution of the template. It handles any error, by both writing it to the User, and also to std out.
-*/
-func Exec(t *template.Template, w io.Writer, tName string, data interface{}) {
-	err := t.ExecuteTemplate(w, tName, data)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Fprintln(w, err)
+//Safelyfinds file from local scope
+func fileGetter(root string) template.FuncMap {
+	getFile := func(fname string) ([]byte, error) {
+		p := path.Join(root, fname)
+		if !strings.HasPrefix(p, root) {
+			return []byte{}, fmt.Errorf("No upward pathing")
+		}
+		return ioutil.ReadFile(p)
+	}
+
+	mdFile := func(fname string) (string, error) {
+		f, err := getFile(fname)
+		if err != nil {
+			return "", err
+		}
+		return mdParse(f), nil
+	}
+
+	getHeadedFile := func(fname string) (map[string]string, error) {
+		f, err := getFile(fname)
+		if err != nil {
+			return map[string]string{}, err
+		}
+		return parse.Headed(f), nil
+	}
+
+	getHeadedMDFile := func(fname string) (map[string]string, error) {
+		m, err := getHeadedFile(fname)
+		if err != nil {
+			return m, err
+		}
+		c, ok := m["contents"]
+		if !ok {
+			return m, fmt.Errorf("No Contents")
+		}
+		m["md"] = mdParse(c)
+		return m, nil
+	}
+
+	//TODO add getFileS and "FileS"
+	return template.FuncMap{
+		"File":         getFile,
+		"mdFile":       mdFile,
+		"headedFile":   getHeadedFile,
+		"headedMDFile": getHeadedMDFile,
 	}
 }
