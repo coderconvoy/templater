@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/coderconvoy/templater/configmanager"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/coderconvoy/templater/configmanager"
 )
 
 type Loose struct {
@@ -17,7 +19,7 @@ type Loose struct {
 var configMan *configmanager.Manager
 
 func staticFiles(w http.ResponseWriter, r *http.Request) {
-	fPath, err := configMan.GetFilePath(r.URL.Host, r.URL.Path)
+	fPath, err := configMan.GetFilePath(r.Host, r.URL.Path)
 
 	if err != nil {
 		w.Write([]byte("Bad File Request"))
@@ -62,9 +64,15 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if p == "favicon.ico" {
-		http.ServeFile(w, r, "/files/s/favicon.ico")
-		return
+
+	//Top Level fake to s
+	fp, err := configMan.GetFilePath(r.Host, "s/"+p)
+	if err == nil {
+		_, err2 := os.Stat(fp)
+		if err2 == nil {
+			http.ServeFile(w, r, fp)
+			return
+		}
 	}
 	//try template
 	for k, v := range p {
