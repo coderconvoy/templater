@@ -3,9 +3,6 @@ package tempower
 import (
 	"errors"
 	"fmt"
-	"github.com/coderconvoy/templater/blob"
-	"github.com/coderconvoy/templater/parse"
-	"github.com/russross/blackfriday"
 	"io/ioutil"
 	"math/rand"
 	"path"
@@ -13,6 +10,10 @@ import (
 	"reflect"
 	"strings"
 	"text/template"
+
+	"github.com/coderconvoy/templater/blob"
+	"github.com/coderconvoy/templater/parse"
+	"github.com/russross/blackfriday"
 )
 
 type PowerTemplate struct {
@@ -21,12 +22,8 @@ type PowerTemplate struct {
 	killer func()
 }
 
-//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
-func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
-	//Todo assign Sharer elsewhere
-
-	t := template.New("")
-	fMap := template.FuncMap{
+func FMap() template.FuncMap {
+	return template.FuncMap{
 		"tDict":          tDict,
 		"randRange":      RandRange,
 		"md":             mdParse,
@@ -38,6 +35,14 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 		"replace":        strings.Replace,
 		"multiReplace":   multiReplace,
 	}
+}
+
+//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
+func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
+	//Todo assign Sharer elsewhere
+
+	t := template.New("")
+	fMap := FMap()
 
 	tMap := fileGetter(root)
 	for k, v := range tMap {
