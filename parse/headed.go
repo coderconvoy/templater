@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/coderconvoy/htmlmaker"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/coderconvoy/htmq"
 )
 
 //HeadOnly reads just the head from a reader and stops there. It returns, the head details, but no contents.
@@ -143,21 +144,21 @@ func (self *MenuEntry) String() string {
 	return res
 }
 
-func TagTree(list []*MenuEntry, rootID string) *htmlmaker.Tag {
+func TagTree(list []*MenuEntry, rootID string) *htmq.Tag {
 
-	ul := htmlmaker.NewTag("ul")
+	ul := htmq.NewTag("ul")
 	if rootID != "" {
 		ul.AddAttrs("id", rootID)
 	}
 	for i := 0; i < len(list); i++ {
-		li := htmlmaker.NewTag("li")
+		li := htmq.NewTag("li")
 		ul.AddChildren(li)
 		if len(list[i].Children) > 0 {
-			butt := htmlmaker.NewTag("a", list[i].Name)
+			butt := htmq.NewTag("a", list[i].Name)
 			li.AddChildren(butt)
 			li.AddChildren(TagTree(list[i].Children, ""))
 		} else {
-			butt := htmlmaker.NewTag("a", "href", list[i].Dest, list[i].Name)
+			butt := htmq.NewTextTag("a", list[i].Name, "href", list[i].Dest)
 			li.AddChildren(butt)
 		}
 
