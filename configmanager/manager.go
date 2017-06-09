@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
 	"github.com/coderconvoy/templater/timestamp"
-	"path"
-	"strings"
+	"github.com/pkg/errors"
 
 	"io"
 	"io/ioutil"
@@ -91,16 +93,29 @@ func (man *Manager) TryTemplate(w io.Writer, host string, p string, data interfa
 	return fmt.Errorf("Tried too many times to access blob")
 }
 
-func (man *Manager) GetFilePath(host, fname string) (string, error) {
+func (man *Manager) GetConfig(host string) (ConfigItem, error) {
+
+	host = strings.TrimPrefix(host, "www.")
 	for _, v := range man.config {
 		if v.Host == host || v.Host == "default" {
-			res := path.Join(v.Folder, fname)
-			if strings.HasPrefix(res, v.Folder) {
-				return res, nil
-			}
+			return v, nil
 		}
 	}
-	return "", fmt.Errorf("Path not reachable")
+	return ConfigItem{}, errors.New("No config assigned to that name")
+
+}
+
+func (man *Manager) GetFilePath(host, fname string) (string, error) {
+	c, err := man.GetConfig(host)
+	if err != nil {
+		return "", errors.Wrap(err, "Could not get file path")
+	}
+
+	res := path.Join(c.Folder, fname)
+	if !strings.HasPrefix(res, c.Folder) {
+		return "", errors.New("No Upwards path building")
+	}
+	return res, nil
 
 }
 
@@ -234,16 +249,18 @@ func manageTemplates(man *Manager) {
 }
 
 func (man *Manager) getTemplates(host string) (*tempower.PowerTemplate, error) {
+	c, err := man.GetConfig(host)
+	if err != nil {
+		return nil, errors.Wrap(err, "No config available for host: "+host)
+	}
+
 	man.Lock()
 	defer man.Unlock()
-	for _, v := range man.config {
-		if v.Host == host || v.Host == "default" {
-			t, ok := man.tmap[v.Folder]
-			if ok {
-				return t.templates, nil
-			}
-		}
+	t, ok := man.tmap[c.Folder]
+
+	if !ok {
+		return nil, errors.New("No Templates available for host: " + host)
 	}
-	return nil, fmt.Errorf("No Templates available for host : %s\n", host)
+	return t.templates, nil
 
 }
