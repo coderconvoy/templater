@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coderconvoy/dbase"
 	"github.com/coderconvoy/templater/configmanager"
 )
 
@@ -53,8 +54,8 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	p := strings.TrimPrefix(r.URL.Path, "/")
 
-	fmt.Println("Host---", host)
-	fmt.Println("Path---", p)
+	dbase.QLog("Host---", host)
+	dbase.QLog("Path---", p)
 	// Empty for index
 
 	if p == "" {
@@ -106,13 +107,18 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	config := flag.String("c", "config.json", "Path to JSON Config file")
 	port := flag.String("p", "80", "Port")
-
+	debug := flag.Bool("d", false, "Debug to stdout")
 	flag.Parse()
+	if *debug {
+		fmt.Println("Debugging to stdout")
+		dbase.SetQLogger(dbase.FmtLog{})
+	}
+
 	var err error
 
 	configMan, err = configmanager.NewManager(*config)
 	if err != nil {
-		fmt.Println("config error:", err)
+		dbase.QLog("config error:", err)
 		return
 	}
 
@@ -120,8 +126,11 @@ func main() {
 
 	http.HandleFunc("/", bigHandler)
 
-	fmt.Println("Started")
+	dbase.QLog("Started")
 
-	http.ListenAndServe(":"+*port, nil)
+	err = http.ListenAndServe(":"+*port, nil)
+	if err != nil {
+		dbase.QLog(err)
+	}
 
 }
