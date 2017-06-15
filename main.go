@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/coderconvoy/dbase"
-	"github.com/coderconvoy/templater/configmanager"
+	"github.com/coderconvoy/templater/cfm"
 )
 
 type Loose struct {
@@ -17,7 +17,7 @@ type Loose struct {
 	Style    string
 }
 
-var configMan *configmanager.Manager
+var configMan *cfm.Manager
 
 func staticFiles(w http.ResponseWriter, r *http.Request) {
 	fPath, err := configMan.GetFilePath(r.Host, r.URL.Path)
@@ -50,7 +50,6 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 
 	//allow errors
 
-	errs := make([]error, 0)
 	var err error
 	p := strings.TrimPrefix(r.URL.Path, "/")
 
@@ -62,7 +61,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 		err = configMan.TryTemplate(w, host, "index", Loose{"index.md", style})
 		if err != nil {
 			fmt.Fprintf(w, "Could not load index, err = %s", err)
-			fmt.Printf("Could not load index, err = %s", err)
+			dbase.QLogf("Could not load index, err = %s", err)
 		}
 		return
 	}
@@ -84,23 +83,19 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				return
 			}
-			errs = append(errs, err)
+			dbase.QLog(err)
 		}
 	}
 	err = configMan.TryTemplate(w, host, p, Loose{p, style})
 	if err == nil {
 		return
 	}
-	errs = append(errs, err)
 
-	//Default
-	fmt.Println(errs)
 	err = configMan.TryTemplate(w, host, "loose", Loose{p + ".md", style})
 	if err != nil {
-		fmt.Println(err)
+		dbase.QLog(err)
 		fmt.Fprintln(w, err)
 	}
-	fmt.Println("ended")
 
 }
 
@@ -116,7 +111,7 @@ func main() {
 
 	var err error
 
-	configMan, err = configmanager.NewManager(*config)
+	configMan, err = cfm.NewManager(*config)
 	if err != nil {
 		dbase.QLog("config error:", err)
 		return

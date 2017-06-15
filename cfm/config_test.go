@@ -1,4 +1,4 @@
-package configmanager
+package cfm
 
 import (
 	"os"

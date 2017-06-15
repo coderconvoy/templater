@@ -1,7 +1,7 @@
 //configmanager is a holder for all the separate hosts and the folders they represent.
 //A configuration reads a json file containing an array [] of ConfigItem s
 //If the last 'Host' is 'default' this will be a catch all
-package configmanager
+package cfm
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/coderconvoy/dbase"
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/tempower"
 	"github.com/coderconvoy/templater/timestamp"
@@ -133,7 +134,7 @@ func (man *Manager) Kill() {
 
 func newTemroot(fol, mod string) (temroot, error) {
 	tpath := path.Join(fol, "templates/*.*")
-	fmt.Println("New Path = ", tpath)
+	dbase.QLogf("New Path = %s", tpath)
 	t, err := tempower.NewPowerTemplate(tpath, fol)
 	if err != nil {
 		return temroot{}, err
@@ -157,7 +158,7 @@ func newTMap(conf []ConfigItem) map[string]*temroot {
 			if err == nil {
 				res[v.Folder] = &t
 			} else {
-				fmt.Printf("Could not load templates :%s,%s", v.Folder, err)
+				dbase.QLogf("Could not load templates :%s,%s", v.Folder, err)
 			}
 		}
 	}
@@ -192,7 +193,7 @@ func manageTemplates(man *Manager) {
 		if err == nil {
 
 			if ts.After(lastCheck) {
-				fmt.Println("Config File Changed")
+				dbase.QLog("Config File Changed")
 				newcon, err := loadConfig(man.filename)
 				if err == nil {
 					oldmap := man.tmap
@@ -207,7 +208,7 @@ func manageTemplates(man *Manager) {
 
 				} else {
 					//ignore the change
-					fmt.Println("Load Config Error:", err)
+					dbase.QLog("Load Config Error:", err)
 				}
 			}
 		}
@@ -226,13 +227,13 @@ func manageTemplates(man *Manager) {
 						v.last = ts
 						man.Unlock()
 					} else {
-						fmt.Printf("ERROR , Could not parse templates Using old ones: %s,%s\n", modpath, err2)
+						dbase.QLogf("ERROR , Could not parse templates Using old ones: %s,%s\n", modpath, err2)
 					}
 
 				}
 
 			} else {
-				fmt.Printf("ERROR, Mod file missing:%s,%s\n ", modpath, err)
+				dbase.QLogf("ERROR, Mod file missing:%s,%s\n ", modpath, err)
 			}
 
 		}

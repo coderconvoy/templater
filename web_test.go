@@ -15,7 +15,6 @@ func (self rr) WriteHeader(int) {
 }
 
 func (self rr) Write(b []byte) (int, error) {
-	//fmt.Println(string(b))
 	return len(b), nil
 }
 
