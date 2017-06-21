@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/coderconvoy/dbase"
@@ -40,6 +41,7 @@ type ConfigItem struct {
 
 type Manager struct {
 	filename string
+	root     string
 	tmap     map[string]*temroot
 	config   []ConfigItem
 	killflag bool
@@ -54,14 +56,19 @@ func NewManager(cFileName string) (*Manager, error) {
 		return nil, err
 	}
 
-	temps := newTMap(c)
+	rp := filepath.Dir(cFileName)
+
+	temps := newTMap(rp, c)
 
 	res := &Manager{
 		filename: cFileName,
+		root:     rp,
 		config:   c,
 		tmap:     temps,
 		killflag: false,
 	}
+
+	fmt.Println("root = ", res.root)
 
 	go manageTemplates(res)
 
@@ -106,6 +113,10 @@ func (man *Manager) GetConfig(host string) (ConfigItem, error) {
 
 }
 
+func (man *Manager) RootPath(p ...string) string {
+	return path.Join(append([]string{man.root}, p...)...)
+}
+
 func (man *Manager) GetFilePath(host, fname string) (string, error) {
 	c, err := man.GetConfig(host)
 	if err != nil {
@@ -116,7 +127,7 @@ func (man *Manager) GetFilePath(host, fname string) (string, error) {
 	if !strings.HasPrefix(res, c.Folder) {
 		return "", errors.New("No Upwards path building")
 	}
-	return res, nil
+	return man.RootPath(res), nil
 
 }
 
@@ -148,13 +159,13 @@ func newTemroot(fol, mod string) (temroot, error) {
 
 }
 
-func newTMap(conf []ConfigItem) map[string]*temroot {
+func newTMap(rootpath string, conf []ConfigItem) map[string]*temroot {
 	res := make(map[string]*temroot)
 
 	for _, v := range conf {
 		_, ok := res[v.Folder]
 		if !ok {
-			t, err := newTemroot(v.Folder, v.Modifier)
+			t, err := newTemroot(path.Join(rootpath, v.Folder), v.Modifier)
 			if err == nil {
 				res[v.Folder] = &t
 			} else {
@@ -199,7 +210,7 @@ func manageTemplates(man *Manager) {
 					oldmap := man.tmap
 					man.Lock()
 					man.config = newcon
-					man.tmap = newTMap(man.config)
+					man.tmap = newTMap(man.root, man.config)
 					man.Unlock()
 
 					for _, v := range oldmap {

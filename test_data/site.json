@@ -1,7 +1,7 @@
 [
     {
         "Host":"default",
-        "Folder":"test_data/site",
+        "Folder":"site",
         "Modifier":"modify"
     }
 ]
