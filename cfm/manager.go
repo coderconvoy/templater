@@ -145,7 +145,7 @@ func (man *Manager) Kill() {
 
 func newTemroot(fol, mod string) (temroot, error) {
 	tpath := path.Join(fol, "templates/*.*")
-	dbase.QLogf("New Path = %s", tpath)
+	Logf("New Path = %s", tpath)
 	t, err := tempower.NewPowerTemplate(tpath, fol)
 	if err != nil {
 		return temroot{}, err
@@ -169,7 +169,7 @@ func newTMap(rootpath string, conf []ConfigItem) map[string]*temroot {
 			if err == nil {
 				res[v.Folder] = &t
 			} else {
-				dbase.QLogf("Could not load templates :%s,%s", v.Folder, err)
+				LogTof(v.Host, "Could not load templates :%s,%s", v.Folder, err)
 			}
 		}
 	}
@@ -204,7 +204,7 @@ func manageTemplates(man *Manager) {
 		if err == nil {
 
 			if ts.After(lastCheck) {
-				dbase.QLog("Config File Changed")
+				Log("Config File Changed")
 				newcon, err := loadConfig(man.filename)
 				if err == nil {
 					oldmap := man.tmap

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coderconvoy/dbase"
 	"github.com/coderconvoy/templater/blob"
 	"github.com/coderconvoy/templater/parse"
 	"github.com/russross/blackfriday"
@@ -72,7 +71,6 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	}
 	t, err = t.ParseFiles(ar2...)
 	if err != nil {
-		dbase.QLog(err)
 		return nil, err
 	}
 	return &PowerTemplate{t, root, killer}, nil

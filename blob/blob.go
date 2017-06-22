@@ -12,7 +12,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/coderconvoy/dbase"
 	"github.com/coderconvoy/templater/parse"
 	"github.com/russross/blackfriday"
 )
@@ -68,7 +67,6 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 
 	d, err := ioutil.ReadDir(fol)
 	if err != nil {
-		dbase.QLogf("Dir Not Available %s", fol)
 		return nil, fmt.Errorf("GetDir could not read dir %s", err)
 	}
 	res := make([]PageInfo, 0)

@@ -69,10 +69,10 @@ func NewFileLogger(fpg FPathGetter) FileLogger {
 				continue
 			}
 
-			line := now.Format("15:04:05") + "::" + a.l + "\n"
+			line := now.Format("15:04:05") + "::" + a.s + "\n"
 			_, err = f.WriteString(line)
 			if err != nil {
-				fmt.Println("message not logged: ", err, "::", a.l)
+				fmt.Println("message not logged: ", err, "::", a.l, a.s)
 			}
 			f.Close()
 		}
