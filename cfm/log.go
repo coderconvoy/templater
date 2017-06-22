@@ -3,6 +3,9 @@ package cfm
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"time"
 
 	"github.com/coderconvoy/dbase"
 )
@@ -17,11 +20,12 @@ var single logger = FmtLogger{}
 
 func SetLogger(l logger) {
 	single = l
+
 }
 
 type FPathGetter interface {
-	RootPath(string) string
-	GetFilePath(string, string) string
+	RootPath(...string) string
+	GetFilePath(string, string) (string, error)
 }
 
 type FmtLogger struct{}
@@ -34,19 +38,63 @@ func (FmtLogger) LogTo(l, s string) {
 	fmt.Println("Logto:", l, ":", s)
 }
 
-type FileLogger struct{ getter FPathGetter }
+//LogData is for sending data through the channel in File Logger
+type logdata struct {
+	l, s string
+}
+
+//FileLogger : only make one, then keep it alive to do all logging
+type FileLogger struct {
+	getter FPathGetter
+	ch     chan logdata
+}
+
+func NewFileLogger(fpg FPathGetter) FileLogger {
+	ch := make(chan logdata, 20)
+	go func() {
+		for a := range ch {
+
+			now := time.Now()
+			fname := now.Format("060102")
+			p := path.Join(a.l, fname+".log")
+			err := os.MkdirAll(a.l, 0777)
+			if err != nil {
+				fmt.Println("Could not make dir:", p, err)
+				continue
+			}
+
+			f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				fmt.Println("message not logged : ", err, "::", a.l)
+				continue
+			}
+
+			line := now.Format("15:04:05") + "::" + a.l + "\n"
+			_, err = f.WriteString(line)
+			if err != nil {
+				fmt.Println("message not logged: ", err, "::", a.l)
+			}
+			f.Close()
+		}
+	}()
+	return FileLogger{
+		fpg, ch,
+	}
+}
 
 func (fl FileLogger) Log(s string) {
 	loc := fl.getter.RootPath("logs/")
-	fl.LogIn(loc, s)
+	fl.ch <- logdata{loc, s}
 }
 
 func (fl FileLogger) LogTo(l, s string) {
-	loc := fl.getter.GetFilePath(l, "logs/")
-	fl.LogIn(loc, s)
-}
+	fl.Log(l + "::" + s)
+	loc, err := fl.getter.GetFilePath(l, "logs/")
+	if err != nil {
+		return
+	}
 
-func (fl FileLogger) LogIn(l, s string) {
+	fl.ch <- logdata{loc, s}
 }
 
 // ----  Public Package methods  -----

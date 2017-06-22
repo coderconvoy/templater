@@ -53,8 +53,7 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	p := strings.TrimPrefix(r.URL.Path, "/")
 
-	dbase.QLog("Host---", host)
-	dbase.QLog("Path---", p)
+	cfm.LogTof(host, "Path---%s", p)
 	// Empty for index
 
 	if p == "" {
@@ -104,28 +103,31 @@ func main() {
 	port := flag.String("p", "80", "Port")
 	debug := flag.Bool("d", false, "Debug to stdout")
 	flag.Parse()
-	if *debug {
-		fmt.Println("Debugging to stdout")
-		dbase.SetQLogger(dbase.FmtLog{})
-	}
 
 	var err error
 
 	configMan, err = cfm.NewManager(*config)
 	if err != nil {
-		dbase.QLog("config error:", err)
+		cfm.Logq("config error:", err)
 		return
+	}
+
+	if !*debug {
+		fmt.Println("Debugging to log folders")
+		cfm.SetLogger(cfm.NewFileLogger(configMan))
+	} else {
+		fmt.Println("Debugging to stdout")
 	}
 
 	http.HandleFunc("/s/", staticFiles)
 
 	http.HandleFunc("/", bigHandler)
 
-	dbase.QLog("Started")
+	cfm.Logq("Started")
 
 	err = http.ListenAndServe(":"+*port, nil)
 	if err != nil {
-		dbase.QLog(err)
+		cfm.Logq(err)
 	}
 
 }
