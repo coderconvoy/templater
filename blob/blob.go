@@ -257,7 +257,7 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 		if err != nil {
 			return nil, err
 		}
-		res["contents"] = string(blackfriday.MarkdownCommon([]byte(res["contents"])))
+		res["md"] = string(blackfriday.MarkdownCommon([]byte(res["contents"])))
 		return res, nil
 
 	}
