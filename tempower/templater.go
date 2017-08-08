@@ -37,7 +37,7 @@ func FMap() template.FuncMap {
 	}
 }
 
-//Power Templates Takes a bunch a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities. Logs and Panics if templates don't parse.
+//Power Templates Takes a glob for a collection of templates, and then loads them all, adding the bonus functions to the templates abilities.
 func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	//Todo assign Sharer elsewhere
 
