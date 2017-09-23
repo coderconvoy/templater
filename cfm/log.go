@@ -24,7 +24,6 @@ func SetLogger(l logger) {
 }
 
 type FPathGetter interface {
-	RootPath(...string) string
 	GetFilePath(string, string) (string, error)
 }
 
@@ -83,7 +82,7 @@ func NewFileLogger(fpg FPathGetter) FileLogger {
 }
 
 func (fl FileLogger) Log(s string) {
-	loc := fl.getter.RootPath("logs/")
+	loc, _ := fl.getter.GetFilePath("", "logs/")
 	fl.ch <- logdata{loc, s}
 }
 

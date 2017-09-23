@@ -6,15 +6,12 @@ package cfm
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/coderconvoy/dbase"
-	"github.com/coderconvoy/templater/blob"
+	"github.com/coderconvoy/lazyf"
 	"github.com/coderconvoy/templater/tempower"
-	"github.com/coderconvoy/templater/timestamp"
 	"github.com/pkg/errors"
 
 	"io"
@@ -23,56 +20,33 @@ import (
 	"time"
 )
 
-type temroot struct {
-	root      string
-	modifier  string
-	templates *tempower.PowerTemplate
-	last      time.Time
-}
-
-type ConfigItem struct {
-	//The host which will redirect to the folder
-	Host string
-	//The Folder containing this hosting, -multiple hosts may point to the same folder
-	Folder string
-	//The Filename inside the Folder of the file we watch for changes
-	Modifier string
-}
-
 type Manager struct {
 	filename string
-	root     string
-	tmap     map[string]*temroot
+	rootLoc  string
 	config   []ConfigItem
-	killflag bool
+	lastEdit time.Time
 	sync.Mutex
 }
 
 //NewManager Creates a new Manager from json file based on ConfigItem
 //params cFileName the name of the file
 func NewManager(cFileName string) (*Manager, error) {
-	c, err := loadConfig(cFileName)
+	confs, err := lazyf.GetConfig(cFileName)
+	if len(confs) == 0 {
+		return &Manager{}, errors.New("Conf, completely empty")
+	}
 	if err != nil {
-		return nil, err
+		return &Manager{}, errors.Wrap("Could not load conf", err)
 	}
-
-	rp := filepath.Dir(cFileName)
-
-	temps := newTMap(rp, c)
-
-	res := &Manager{
+	cfig := confs[0]
+	man = &Manager{
 		filename: cFileName,
-		root:     rp,
-		config:   c,
-		tmap:     temps,
-		killflag: false,
+		rootLoc:  cfig.PString(cFilename, "root"),
+		lastEdit: time.Now(),
+	}
+	for k, c := range confs[1] {
 	}
 
-	fmt.Println("root = ", res.root)
-
-	go manageTemplates(res)
-
-	return res, nil
 }
 
 //TryTemplate is the main useful method takes
@@ -81,31 +55,25 @@ func NewManager(cFileName string) (*Manager, error) {
 //p:the template name
 //data:The data to send to the template
 func (man *Manager) TryTemplate(w io.Writer, host string, p string, data interface{}) error {
+	t, err := t.getTemplates(host)
 
-	b := new(bytes.Buffer)
-	for i := 0; i < 10; i++ {
-		t, err := man.getTemplates(host)
-		if err != nil {
-			return err
-		}
-		err = t.ExecuteTemplate(b, p, data)
-		if err == nil {
-			w.Write(b.Bytes())
-			return nil
-		}
-		if err != blob.DeadBlob() {
-			return err
-		}
+	if err != nil {
+		return errors.New("Could not access templates for :" + host)
 	}
 
-	return fmt.Errorf("Tried too many times to access blob")
+	b := new(bytes.Buffer)
+	err = t.ExecuteTemplate(b, p, data)
+	if err != nil {
+		return err
+	}
+	io.Copy(w, b)
+
 }
 
 func (man *Manager) GetConfig(host string) (ConfigItem, error) {
 
-	host = strings.TrimPrefix(host, "www.")
 	for _, v := range man.config {
-		if v.Host == host || v.Host == "default" {
+		if v.CanHost(host) {
 			return v, nil
 		}
 	}
@@ -113,67 +81,34 @@ func (man *Manager) GetConfig(host string) (ConfigItem, error) {
 
 }
 
-func (man *Manager) RootPath(p ...string) string {
-	return path.Join(append([]string{man.root}, p...)...)
-}
-
 func (man *Manager) GetFilePath(host, fname string) (string, error) {
+	if host == "" {
+		p := path.Join(man.root, rpath), nil
+		if !strings.hasPrefix(p, man.root) {
+			return "", errors.New("No upward pathing")
+		}
+		return p, nil
+	}
+
 	c, err := man.GetConfig(host)
 	if err != nil {
 		return "", errors.Wrap(err, "Could not get file path")
 	}
 
-	res := path.Join(c.Folder, fname)
-	if !strings.HasPrefix(res, c.Folder) {
+	rpath = c.Folder
+	if len(rpath) == 0 {
+		return "", errors.New("No Folder location for host:" + host)
+	}
+	if c.Folder[0] != "/" {
+		rpath = path.Join(man.root, rpath)
+	}
+
+	res := path.Join(rpath, fname)
+	if !strings.HasPrefix(res, rpath) {
 		return "", errors.New("No Upwards path building")
 	}
-	return man.RootPath(res), nil
+	return res, nil
 
-}
-
-//Kill ends all internal go routines. Do not use the manager after calling Kill()
-func (man *Manager) Kill() {
-	man.Lock()
-	defer man.Unlock()
-
-	man.killflag = true
-	//TODO loop through and kill all templates
-	for _, v := range man.tmap {
-		v.templates.Kill()
-	}
-}
-
-func newTemroot(fol, mod string) (temroot, error) {
-	tpath := path.Join(fol, "templates/*.*")
-	Logf("New Path = %s", tpath)
-	t, err := tempower.NewPowerTemplate(tpath, fol)
-	if err != nil {
-		return temroot{}, err
-	}
-	return temroot{
-		root:      fol,
-		modifier:  mod,
-		templates: t,
-		last:      time.Now(),
-	}, nil
-
-}
-
-func newTMap(rootpath string, conf []ConfigItem) map[string]*temroot {
-	res := make(map[string]*temroot)
-
-	for _, v := range conf {
-		_, ok := res[v.Folder]
-		if !ok {
-			t, err := newTemroot(path.Join(rootpath, v.Folder), v.Modifier)
-			if err == nil {
-				res[v.Folder] = &t
-			} else {
-				LogTof(v.Host, "Could not load templates :%s,%s", v.Folder, err)
-			}
-		}
-	}
-	return res
 }
 
 func loadConfig(fName string) ([]ConfigItem, error) {
@@ -200,7 +135,7 @@ func manageTemplates(man *Manager) {
 		thisCheck = time.Now()
 
 		//if config has been updated then reset everything
-		ts, err := timestamp.GetMod(man.filename)
+		ts, err := GetModified(man.filename)
 		if err == nil {
 
 			if ts.After(lastCheck) {
@@ -227,7 +162,7 @@ func manageTemplates(man *Manager) {
 		//check folders for update only update the changed
 		for k, v := range man.tmap {
 			modpath := path.Join(v.root, v.modifier)
-			ts, err := timestamp.GetMod(modpath)
+			ts, err := GetModified(modpath)
 			if err == nil {
 				if ts.After(v.last) {
 					t, err2 := newTemroot(v.root, v.modifier)
@@ -248,11 +183,6 @@ func manageTemplates(man *Manager) {
 			}
 
 		}
-
-		//Allow kill
-		if man.killflag {
-			return
-		}
 		//for each file look at modified file if changed update.
 		lastCheck = thisCheck
 		time.Sleep(time.Minute / 2)
@@ -265,14 +195,5 @@ func (man *Manager) getTemplates(host string) (*tempower.PowerTemplate, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "No config available for host: "+host)
 	}
-
-	man.Lock()
-	defer man.Unlock()
-	t, ok := man.tmap[c.Folder]
-
-	if !ok {
-		return nil, errors.New("No Templates available for host: " + host)
-	}
-	return t.templates, nil
-
+	return c.plates, nil
 }
