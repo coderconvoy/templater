@@ -1,0 +1,12 @@
+config
+    root:/home/matthew/scripts/websites/
+
+Bethyn
+   host:bethyn.localhost:8080 
+   folder:bethyn
+   mod:modify
+
+Storyfeet
+    host:default
+    folder:storyfeet
+    mod:modify

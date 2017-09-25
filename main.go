@@ -127,6 +127,7 @@ func main() {
 
 	err = http.ListenAndServe(":"+*port, nil)
 	if err != nil {
+		fmt.Println(err)
 		cfm.Logq(err)
 	}
 

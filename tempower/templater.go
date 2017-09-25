@@ -59,6 +59,9 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(globArr) == 0 {
+		return nil, errors.New("No files found for glob:" + glob)
+	}
 	ar2 := make([]string, 0, 0)
 
 	for _, v := range globArr {
