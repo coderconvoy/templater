@@ -114,7 +114,7 @@ func main() {
 
 	if !*debug {
 		fmt.Println("Debugging to log folders")
-		cfm.SetLogger(cfm.NewFileLogger(configMan))
+		cfm.SetLogger(configMan)
 	} else {
 		fmt.Println("Debugging to stdout")
 	}

@@ -23,6 +23,10 @@ type Manager struct {
 	sync.Mutex
 }
 
+func (m Manager) LogLoc() string {
+	return path.Join(m.rootLoc, "logs")
+}
+
 //NewManager Creates a new Manager from json file based on ConfigItem
 //params cFileName the name of the file
 func NewManager(cFileName string) (*Manager, error) {
