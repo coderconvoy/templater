@@ -20,7 +20,6 @@ type Manager struct {
 	filename string
 	rootLoc  string
 	sites    []ConfigItem
-	lastEdit time.Time
 	sync.Mutex
 }
 
@@ -38,7 +37,6 @@ func NewManager(cFileName string) (*Manager, error) {
 	man := &Manager{
 		filename: cFileName,
 		rootLoc:  cfig.PStringD(cFileName, "root"),
-		lastEdit: time.Now(),
 	}
 
 	err = nil

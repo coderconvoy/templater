@@ -4,7 +4,6 @@ import (
 	"errors"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/coderconvoy/lazyf"
 	"github.com/coderconvoy/templater/tempower"
@@ -18,7 +17,6 @@ type ConfigItem struct {
 	//The Filename inside the Folder of the file we watch for changes
 	Modifier string
 	plates   *tempower.PowerTemplate
-	last     time.Time
 }
 
 func NewConfigItem(lz lazyf.LZ, root string) (ConfigItem, error) {
@@ -33,8 +31,7 @@ func NewConfigItem(lz lazyf.LZ, root string) (ConfigItem, error) {
 	item := ConfigItem{
 		Hosts:    lz.PStringAr("host", "Host"),
 		Folder:   fol,
-		Modifier: lz.PStringD("Mod", "mod", "Modifier", "modifier"),
-		last:     time.Now(),
+		Modifier: lz.PStringD("modify", "Mod", "mod", "Modifier", "modifier"),
 	}
 	plates, err := tempower.NewPowerTemplate(path.Join(fol, "templates/*"), fol)
 	if err != nil {

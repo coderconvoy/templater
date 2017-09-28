@@ -5,98 +5,20 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/coderconvoy/dbase"
 )
 
-type logger interface {
-	Log(s string)
-	LogTo(l, s string)
-}
-
 //single, the core logger, will be used by all package log methods, to allow interchangeable Loggin
-var single logger = FmtLogger{}
-
-func SetLogger(l logger) {
-	single = l
-
-}
-
-type FPathGetter interface {
-	GetFilePath(string, string) (string, error)
-}
-
-type FmtLogger struct{}
-
-func (FmtLogger) Log(s string) {
-	fmt.Println(s)
-}
-
-func (FmtLogger) LogTo(l, s string) {
-	fmt.Println("Logto:", l, ":", s)
-}
-
-//LogData is for sending data through the channel in File Logger
-type logdata struct {
-	l, s string
-}
-
-//FileLogger : only make one, then keep it alive to do all logging
-type FileLogger struct {
-	getter FPathGetter
-	ch     chan logdata
-}
-
-func NewFileLogger(fpg FPathGetter) FileLogger {
-	ch := make(chan logdata, 20)
-	go func() {
-		for a := range ch {
-
-			now := time.Now()
-			fname := now.Format("060102")
-			p := path.Join(a.l, fname+".log")
-			err := os.MkdirAll(a.l, 0777)
-			if err != nil {
-				fmt.Println("Could not make dir:", p, err)
-				continue
-			}
-
-			f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-			if err != nil {
-				fmt.Println("message not logged : ", err, "::", a.l)
-				continue
-			}
-
-			line := now.Format("15:04:05") + "::" + a.s + "\n"
-			_, err = f.WriteString(line)
-			if err != nil {
-				fmt.Println("message not logged: ", err, "::", a.l, a.s)
-			}
-			f.Close()
-		}
-	}()
-	return FileLogger{
-		fpg, ch,
-	}
-}
-
-func (fl FileLogger) Log(s string) {
-	loc, _ := fl.getter.GetFilePath("", "logs/")
-	fl.ch <- logdata{loc, s}
-}
-
-func (fl FileLogger) LogTo(l, s string) {
-	fl.Log(l + "::" + s)
-	loc, err := fl.getter.GetFilePath(l, "logs/")
-	if err != nil {
-		return
-	}
-
-	fl.ch <- logdata{loc, s}
-}
+var single logger = logger{}
 
 // ----  Public Package methods  -----
+
+func SetLogger(man *Manager, af string) {
+	single = logger{man: man, allFolder: af}
+}
 
 func Log(s string) {
 	single.Log(s)
@@ -123,4 +45,77 @@ func LogTof(l, s string, d ...interface{}) {
 func LogToq(l string, d ...interface{}) {
 	f := dbase.SLog(d...)
 	single.LogTo(l, f)
+}
+
+// --- Under the hood ----
+//by using locks within goroutines, we protect from deadlock, and allow the function to return quickly, without waiting for the file write.
+
+type logger struct {
+	man       *Manager
+	allFolder string
+	sync.Mutex
+}
+
+//Log uses a go routine with a mutex for filewrites
+func (lg logger) Log(s string) {
+	go func() {
+		lg.Lock()
+		defer lg.Unlock()
+
+		if lg.allFolder == "" {
+			fmt.Println("Logger not Set", s)
+			return
+		}
+		err := logToFolder(lg.allFolder, s)
+		if err != nil {
+			fmt.Println("Logging err", err, s)
+		}
+	}()
+}
+
+//LogTo uses go-routine with a mutex for fileWrites
+func (lg logger) LogTo(host, s string) {
+	ps := host + "::" + s
+	lg.Log(ps)
+	go func() {
+		lg.Lock()
+		defer lg.Unlock()
+		if lg.man == nil {
+			fmt.Println("Manager not set: ", s)
+			return
+		}
+		cf, err := lg.man.GetConfig(host)
+		if err != nil {
+			lg.Log("Logging Host not found: " + s)
+			return
+		}
+		err = logToFolder(path.Join(cf.Folder, "logs"), s)
+		if err != nil {
+			lg.Log("Could not access host log folder," + host + "," + cf.Folder + "," + s)
+			return
+		}
+	}()
+}
+
+func logToFolder(folder string, s string) error {
+	now := time.Now()
+	fname := now.Format("060102")
+	p := path.Join(folder, fname)
+	err := os.MkdirAll(folder, 0777)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+
+	line := now.Format("15:04:05") + "::" + s + "\n"
+	_, err = f.WriteString(line)
+	if err != nil {
+		return err
+	}
+	f.Close()
+
+	return nil
 }
