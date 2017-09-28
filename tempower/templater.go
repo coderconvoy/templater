@@ -18,8 +18,7 @@ import (
 
 type PowerTemplate struct {
 	*template.Template
-	root   string
-	killer func()
+	root string
 }
 
 func FMap() template.FuncMap {
@@ -49,7 +48,7 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 		fMap[k] = v
 	}
 
-	tMap, killer := blob.SafeBlobFuncs(root)
+	tMap = blob.AccessMap(root)
 	for k, v := range tMap {
 		fMap[k] = v
 	}
@@ -76,12 +75,8 @@ func NewPowerTemplate(glob string, root string) (*PowerTemplate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PowerTemplate{t, root, killer}, nil
+	return &PowerTemplate{t, root}, nil
 
-}
-
-func (pt PowerTemplate) Kill() {
-	pt.killer()
 }
 
 /*

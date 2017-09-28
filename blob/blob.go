@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sort"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -25,34 +25,12 @@ type PageInfo struct {
 type BlobSet struct {
 	root string
 	m    map[string][]PageInfo
+	*sync.Mutex
 }
 
 func NewBlobSet(root string) *BlobSet {
-	return &BlobSet{root, make(map[string][]PageInfo)}
+	return &BlobSet{root, make(map[string][]PageInfo), &sync.Mutex{}}
 }
-
-type DeadBlobErr struct{}
-
-func (dbe DeadBlobErr) Error() string {
-	return "This blob has been killed"
-}
-
-var deadBlob = DeadBlobErr{}
-
-func DeadBlob() error {
-	return deadBlob
-}
-
-type ByDateDown []PageInfo
-type ByName []PageInfo
-
-func (bd ByDateDown) Len() int           { return len(bd) }
-func (bd ByDateDown) Less(a, b int) bool { return bd[b].Date.Before(bd[a].Date) }
-func (bd ByDateDown) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
-
-func (bd ByName) Len() int           { return len(bd) }
-func (bd ByName) Less(a, b int) bool { return bd[b].FName > bd[a].FName }
-func (bd ByName) Swap(a, b int)      { bd[a], bd[b] = bd[b], bd[a] }
 
 func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 	if sortBy != "name" {
@@ -61,6 +39,9 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 
 	fol = path.Join(bs.root, fol)
 	store := sortBy + "#" + fol
+
+	bs.Lock()
+	defer bs.Unlock()
 	if res, ok := bs.m[store]; ok {
 		return res, nil
 	}
@@ -104,9 +85,9 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 	}
 
 	if sortBy == "name" {
-		sort.Sort(ByName(res))
+		Sort(res, ByName(true))
 	} else {
-		sort.Sort(ByDateDown(res))
+		Sort(res, ByDate(false))
 	}
 
 	bs.m[store] = res
@@ -153,74 +134,20 @@ func (bs *BlobSet) GetBlob(fol, file, sortMode string) map[string]string {
 
 }
 
-func SafeBlobFuncs(root string) (template.FuncMap, func()) {
-	ch, saf := blobChans(root)
-
-	runner, killer := blobGetter(ch, saf)
-
-	return AccessMap(runner), killer
-}
-
-func blobGetter(ch chan func(*BlobSet), safety chan bool) (func(func(*BlobSet)) error, func()) {
-
-	runner := func(f func(*BlobSet)) error {
-		if <-safety {
-			ch <- f
-			return nil
-		}
-		return deadBlob
-	}
-
-	killer := func() {
-		if <-safety {
-			close(ch)
-		}
-	}
-
-	return runner, killer
-}
-
-func blobChans(root string) (chan func(*BlobSet), chan bool) {
-	ch := make(chan func(*BlobSet))
-	safety := make(chan bool)
-
-	go func() {
-		bb := NewBlobSet(root)
-		safety <- true
-		for fn := range ch {
-			fn(bb)
-			safety <- true
-		}
-		close(safety)
-	}()
-	return ch, safety
-
-}
-
-func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
-	type backinfo struct {
-		pi  []PageInfo
-		err error
-	}
+func AccessMap(rootFol string) template.FuncMap {
+	cache := NewBlobSet(rootFol)
 
 	getAll := func(fol string, sortMode ...string) ([]PageInfo, error) {
 		sm := "date"
 		if len(sortMode) > 0 {
 			sm = sortMode[0]
 		}
-
-		bchan := make(chan backinfo)
-		err := runner(func(bs *BlobSet) {
-			bi, er := bs.GetDir(fol, sm)
-			res := backinfo{bi, er}
-			bchan <- res
-		})
+		res, err := cache.GetDir(fol, sm)
 
 		if err != nil {
 			return nil, err
 		}
-		res := <-bchan
-		return res.pi, res.err
+		return res, err
 	}
 
 	getAllNames := func(fol string, sortMode ...string) ([]string, error) {
@@ -236,27 +163,16 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 
 	}
 
-	getOne := func(fol, file string, sortMode ...string) (map[string]string, error) {
+	getOne := func(fol, file string, sortMode ...string) map[string]string {
 		sm := "date"
 		if len(sortMode) > 0 {
 			sm = sortMode[0]
 		}
-		bchan := make(chan map[string]string)
-		err := runner(func(bs *BlobSet) {
-			bchan <- bs.GetBlob(fol, file, sm)
-		})
-		if err != nil {
-			return nil, err
-		}
-		return <-bchan, nil
-
+		return cache.GetBlob(fol, file, sm)
 	}
 
 	getOneMD := func(fol, file string, sortMode ...string) (map[string]string, error) {
-		res, err := getOne(fol, file, sortMode...)
-		if err != nil {
-			return nil, err
-		}
+		res := getOne(fol, file, sortMode...)
 		res["md"] = string(blackfriday.MarkdownCommon([]byte(res["contents"])))
 		res["contents"] = res["md"] // Covering legacy,
 		return res, nil
@@ -264,10 +180,7 @@ func AccessMap(runner func(func(*BlobSet)) error) template.FuncMap {
 	}
 
 	getContent := func(fol, file string, sortMode ...string) (string, error) {
-		res, err := getOne(fol, file, sortMode...)
-		if err != nil {
-			return "", err
-		}
+		res := getOne(fol, file, sortMode...)
 
 		return res["contents"], nil
 	}
