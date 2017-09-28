@@ -20,7 +20,7 @@ var single logger = FmtLogger{}
 
 // ----  Public Package methods  -----
 
-func SetLogger(man *Manager, af string) {
+func SetLogger(man *Manager) {
 	single = man
 }
 
