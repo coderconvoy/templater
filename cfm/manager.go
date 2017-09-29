@@ -6,21 +6,21 @@ package cfm
 import (
 	"bytes"
 	"path"
+	"sync"
 
 	"github.com/coderconvoy/lazyf"
 	"github.com/coderconvoy/templater/tempower"
 	"github.com/pkg/errors"
 
 	"io"
-	"sync"
 	"time"
 )
 
 type Manager struct {
-	filename string
-	rootLoc  string
-	sites    []ConfigItem
-	sync.Mutex
+	filename   string
+	rootLoc    string
+	sites      []*ConfigItem
+	sync.Mutex // Currently just for logger
 }
 
 func (m Manager) LogLoc() string {
@@ -78,16 +78,15 @@ func (man *Manager) TryTemplate(w io.Writer, host string, p string, data interfa
 	return nil
 }
 
-func (man *Manager) GetConfig(host string) (ConfigItem, error) {
+//Note Locking Method for map safety. Use with some care
+func (man *Manager) GetConfig(host string) (*ConfigItem, error) {
 
-	man.Lock()
-	defer man.Unlock()
 	for _, v := range man.sites {
 		if v.CanHost(host) {
 			return v, nil
 		}
 	}
-	return ConfigItem{}, errors.New("No config assigned to that name")
+	return nil, errors.New("No config assigned to that name")
 
 }
 
@@ -120,35 +119,13 @@ func (man *Manager) GetFilePath(host, fname string) (string, error) {
 
 func manageTemplates(man *Manager) {
 
-	lastCheck := time.Now()
-	var thisCheck time.Time
-
 	for {
-		thisCheck = time.Now()
 
 		//check folders for update only update the changed
-		for k, v := range man.sites {
-			modpath := path.Join(v.Folder, v.Modifier)
-			ts, err := GetModified(modpath)
-			if err == nil {
-				if ts.After(lastCheck) {
-					fol := v.Folder
-					newPlates, err := tempower.NewPowerTemplate(path.Join(fol, "templates/*"), fol)
-					if err != nil {
-						//TODO Log it
-						continue
-					}
-					man.Lock()
-					man.sites[k].plates = newPlates
-					man.Unlock()
-				}
-
-			} else {
-			}
-
+		for _, v := range man.sites {
+			v.Update()
 		}
 		//for each file look at modified file if changed update.
-		lastCheck = thisCheck
 		time.Sleep(time.Minute / 3)
 	}
 
@@ -159,5 +136,5 @@ func (man *Manager) getTemplates(host string) (*tempower.PowerTemplate, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "No config available for host: "+host)
 	}
-	return c.plates, nil
+	return c.Plates(), nil
 }

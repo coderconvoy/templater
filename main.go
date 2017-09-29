@@ -78,6 +78,9 @@ func bigHandler(w http.ResponseWriter, r *http.Request) {
 	for k, v := range p {
 		if v == '/' {
 			err = configMan.TryTemplate(w, host, p[:k], Loose{p[k+1:], style})
+			if err != nil {
+				dbase.QLog("No template found:" + err.Error())
+			}
 
 			if err == nil {
 				return
