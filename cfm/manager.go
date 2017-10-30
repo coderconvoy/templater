@@ -19,6 +19,7 @@ import (
 type Manager struct {
 	filename   string
 	rootLoc    string
+	confs      lazyf.LZ
 	sites      []*ConfigItem
 	sync.Mutex // Currently just for logger
 }
@@ -39,6 +40,7 @@ func NewManager(cFileName string) (*Manager, error) {
 	}
 	cfig := confs[0]
 	man := &Manager{
+		confs:    cfig,
 		filename: cFileName,
 		rootLoc:  cfig.PStringD(cFileName, "root"),
 	}
@@ -137,4 +139,20 @@ func (man *Manager) getTemplates(host string) (*tempower.PowerTemplate, error) {
 		return nil, errors.Wrap(err, "No config available for host: "+host)
 	}
 	return c.Plates(), nil
+}
+
+func (man *Manager) Confs() lazyf.LZ {
+	return man.confs
+}
+
+func (man *Manager) KeyLoc() string {
+	return man.confs.PStringD("", "certloc", "certlocs")
+}
+
+func (man *Manager) Domains() []string {
+	res := []string{}
+	for _, v := range man.sites {
+		res = append(res, v.Hosts...)
+	}
+	return res
 }

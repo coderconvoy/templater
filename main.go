@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -126,12 +129,55 @@ func main() {
 
 	http.HandleFunc("/", bigHandler)
 
+	keyLoc := configMan.KeyLoc()
+
+	//if no keys
+	if keyLoc == "" {
+		cfm.Logq("Starting with no TLS")
+		err := http.ListenAndServe(":"+*port, nil)
+		if err != nil {
+			fmt.Println(err)
+			cfm.Logq(err)
+		}
+		return
+	}
+
 	cfm.Logq("Started")
 
-	err = http.ListenAndServe(":"+*port, nil)
-	if err != nil {
-		fmt.Println(err)
-		cfm.Logq(err)
+	go func() {
+		err := http.ListenAndServe(":"+*port, nil)
+		if err != nil {
+			fmt.Println(err)
+			cfm.Logq(err)
+		}
+	}()
+	//TLS bit could be complicated
+
+	scfg := &tls.Config{}
+	doms := configMan.Domains()
+
+	pubkeyf := configMan.Confs().PStringD("fullchain.pem", "pubkey")
+	privkeyf := configMan.Confs().PStringD("privkey.pem", "privkey")
+	cfm.Logf("Keylocs:%s:%s", pubkeyf, privkeyf)
+
+	for _, v := range doms {
+		cfm.Logf("c for: %s", v)
+		cert, err := tls.LoadX509KeyPair(path.Join(keyLoc, v, pubkeyf), path.Join(keyLoc, v, privkeyf))
+		if err != nil {
+			cfm.Logf(" --- Certificate not found: %s -- %s", v, err)
+			continue
+		}
+		scfg.Certificates = append(scfg.Certificates, cert)
 	}
+
+	scfg.BuildNameToCertificate()
+
+	tlserver := http.Server{
+		Addr:      ":443",
+		Handler:   http.DefaultServeMux,
+		TLSConfig: scfg,
+	}
+
+	log.Fatal(tlserver.ListenAndServeTLS("", ""))
 
 }
