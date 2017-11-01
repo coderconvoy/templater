@@ -154,5 +154,11 @@ func (man *Manager) Domains() []string {
 	for _, v := range man.sites {
 		res = append(res, v.Hosts...)
 	}
-	return res
+
+	www := []string{}
+	for _, v := range res {
+		www = append(www, "www."+v)
+	}
+
+	return append(res, www...)
 }

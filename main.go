@@ -134,7 +134,7 @@ func main() {
 	//if no keys
 	if keyLoc == "" {
 		cfm.Logq("Starting with no TLS")
-		err := http.ListenAndServe(":"+*port, nil)
+		err := http.ListenAndServe(":"+*port, SafeMux{})
 		if err != nil {
 			fmt.Println(err)
 			cfm.Logq(err)
@@ -142,15 +142,6 @@ func main() {
 		return
 	}
 
-	cfm.Logq("Started")
-
-	go func() {
-		err := http.ListenAndServe(":"+*port, nil)
-		if err != nil {
-			fmt.Println(err)
-			cfm.Logq(err)
-		}
-	}()
 	//TLS bit could be complicated
 
 	scfg := &tls.Config{}
@@ -160,13 +151,15 @@ func main() {
 	privkeyf := configMan.Confs().PStringD("privkey.pem", "privkey")
 	cfm.Logf("Keylocs:%s:%s", pubkeyf, privkeyf)
 
+	insecMux := InsecMux{}
 	for _, v := range doms {
-		cfm.Logf("c for: %s", v)
 		cert, err := tls.LoadX509KeyPair(path.Join(keyLoc, v, pubkeyf), path.Join(keyLoc, v, privkeyf))
 		if err != nil {
-			cfm.Logf(" --- Certificate not found: %s -- %s", v, err)
+			cfm.Logf("--X--%s\n", v)
 			continue
 		}
+		insecMux.secDoms = append(insecMux.secDoms, v)
+
 		scfg.Certificates = append(scfg.Certificates, cert)
 	}
 
@@ -174,10 +167,19 @@ func main() {
 
 	tlserver := http.Server{
 		Addr:      ":443",
-		Handler:   http.DefaultServeMux,
+		Handler:   SafeMux{},
 		TLSConfig: scfg,
 	}
 
-	log.Fatal(tlserver.ListenAndServeTLS("", ""))
+	cfm.Logq("Started")
 
+	go func() {
+		err := http.ListenAndServe(":"+*port, insecMux)
+		if err != nil {
+			fmt.Println(err)
+			cfm.Logq(err)
+		}
+	}()
+
+	log.Fatal(tlserver.ListenAndServeTLS("", ""))
 }
