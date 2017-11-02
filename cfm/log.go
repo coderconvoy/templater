@@ -90,13 +90,7 @@ func (lg *Manager) LogTo(host, s string) {
 			lg.Log("Logging Host not found: " + s)
 			return
 		}
-		lg.Lock()
-		defer lg.Unlock()
-		err = logToFolder(path.Join(cf.Folder, "logs"), s)
-		if err != nil {
-			lg.Log("Could not access host log folder," + host + "," + cf.Folder + "," + s)
-			return
-		}
+		cf.Log(s)
 	}()
 }
 
