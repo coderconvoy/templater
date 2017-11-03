@@ -3,11 +3,16 @@ package cfm
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
+	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/coderconvoy/dbase"
 	"github.com/coderconvoy/lazyf"
 	"github.com/coderconvoy/templater/tempower"
 )
@@ -23,6 +28,11 @@ type templateSite struct {
 	lastMod  time.Time
 	plates   *tempower.PowerTemplate
 	sync.Mutex
+}
+
+type Loose struct {
+	FileName string
+	Style    string
 }
 
 func NewTemplateSite(lz lazyf.LZ, root string) (*templateSite, error) {
@@ -110,13 +120,10 @@ func (ts *templateSite) TryTemplate(w io.Writer, host string, p string, data int
 	return nil
 }
 
-func (ts templateSite) GetFilePath(fname string) (string, error) {
+func (ts *templateSite) GetFilePath(fname string) (string, error) {
 	rpath := ts.Folder
 	if len(rpath) == 0 {
 		return "", errors.New("No Folder location for host:")
-	}
-	if ts.Folder[0] != '/' {
-		rpath = path.Join(man.rootLoc, rpath)
 	}
 
 	res, err := SafeJoin(rpath, fname)
@@ -124,4 +131,87 @@ func (ts templateSite) GetFilePath(fname string) (string, error) {
 		return "", err
 	}
 	return res, nil
+}
+
+func (ts *templateSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//Static files under /s/
+
+	if strings.HasPrefix(r.URL.Path, "/s/") {
+		fPath, err := ts.GetFilePath(r.URL.Path)
+		if err != nil {
+			w.Write([]byte("Bad File Request"))
+		}
+		http.ServeFile(w, r, fPath)
+		return
+	}
+
+	//Handle restyling options with a style cookie
+	host := r.Host
+	styleC, cerr := r.Cookie("style")
+	style := ""
+	if cerr == nil {
+		style = styleC.Value
+	}
+
+	s2 := r.URL.Query().Get("style")
+	if s2 != "" {
+		style = s2
+		styleC = &http.Cookie{Name: "style", Value: style, Expires: time.Now().Add(time.Hour * 24)}
+	}
+
+	if styleC != nil {
+		http.SetCookie(w, styleC)
+	}
+
+	//allow errors
+
+	var err error
+	p := strings.TrimPrefix(r.URL.Path, "/")
+
+	LogTof(host, "Path---%s", p)
+	// Empty for index
+
+	if p == "" {
+		err = ts.TryTemplate(w, host, "index", Loose{"index.md", style})
+		if err != nil {
+			fmt.Fprintf(w, "Could not load index, err = %s", err)
+			dbase.QLogf("Could not load index, err = %s", err)
+		}
+		return
+	}
+
+	//Top Level fake to s
+	fp, err := ts.GetFilePath("s/" + p)
+	if err == nil {
+		_, err2 := os.Stat(fp)
+		if err2 == nil {
+			http.ServeFile(w, r, fp)
+			return
+		}
+	}
+	//try template
+	for k, v := range p {
+		if v == '/' {
+			err = ts.TryTemplate(w, host, p[:k], Loose{p[k+1:], style})
+			if err != nil {
+				dbase.QLog("No template found:" + err.Error())
+			}
+
+			if err == nil {
+				return
+			}
+			dbase.QLog(err)
+		}
+	}
+	err = ts.TryTemplate(w, host, p, Loose{p, style})
+	if err == nil {
+		return
+	}
+
+	err = ts.TryTemplate(w, host, "loose", Loose{p + ".md", style})
+	if err != nil {
+		dbase.QLog(err)
+		fmt.Fprintln(w, err)
+	}
+
 }

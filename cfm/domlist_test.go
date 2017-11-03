@@ -5,22 +5,23 @@ import (
 )
 
 func Test_DomList(t *testing.T) {
-	d := DomList{"www.storyfeet.com", "www.happy"}
+	d := DomList{"storyfeet.com", "www.happy"}
 
 	ts := []struct {
 		d string
 		r bool
 	}{
+		{"www.storyfeet.com", true},
 		{"www.storyfeet", false},
-		{"com", true},
+		{"com", false},
 		{"storyfeet.com", true},
-		{"happy", true},
+		{"happy", false},
 	}
 
 	for k, v := range ts {
 		res := d.CanHost(v.d)
 		if res != v.r {
-			t.Errorf("Line %d: expected %b, got %b", k, v.r, res)
+			t.Errorf("%d:%s: expected %t, got %t", k, v.d, v.r, res)
 		}
 	}
 }

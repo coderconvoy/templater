@@ -28,20 +28,15 @@ func (d DomList) CanHost(u string) bool {
 		//try after every dot for compare
 		for k, c := range u {
 			if c == '.' {
-				if v == u[k:] {
+				if v == u[k+1:] {
 					return true
 				}
 
 			}
 		}
-
 		if v == "default" {
 			return true
 		}
 	}
 	return false
-}
-
-func (ts *templateSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//TODO
 }

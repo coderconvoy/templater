@@ -10,11 +10,12 @@ import (
 type SafeMux struct{}
 
 func (s SafeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/s/") {
-		staticFiles(w, r)
+	cf, err := configMan.GetConfig(r.Host)
+	if err != nil {
+		http.Error(w, "No Site under that domain type", 404)
 		return
 	}
-	bigHandler(w, r)
+	cf.ServeHTTP(w, r)
 }
 
 type InsecMux struct {
