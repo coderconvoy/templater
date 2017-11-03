@@ -1,7 +1,10 @@
 package cfm
 
 import (
+	"errors"
 	"net/http"
+
+	"github.com/coderconvoy/lazyf"
 )
 
 type ConfigItem interface {
@@ -18,7 +21,6 @@ func (d DomList) Domains() DomList {
 	return d
 }
 
-//
 func (d DomList) CanHost(u string) bool {
 	for _, v := range d {
 		if v == u {
@@ -39,4 +41,17 @@ func (d DomList) CanHost(u string) bool {
 		}
 	}
 	return false
+}
+
+func NewConfigItem(lz lazyf.LZ, root string) (ConfigItem, error) {
+	if _, err := lz.PString("proxy", "Proxy"); err == nil {
+		c, err := NewProxySite(lz, root)
+		return c, err
+	}
+
+	if _, err := lz.PString("folder", "Folder"); err == nil {
+		return NewTemplateSite(lz, root)
+	}
+
+	return nil, errors.New("No ConfigItem Available")
 }

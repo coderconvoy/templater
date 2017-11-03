@@ -44,7 +44,7 @@ func NewManager(cFileName string) (*Manager, error) {
 
 	err = nil
 	for _, c := range confs[1:] {
-		nc, e := NewTemplateSite(c, man.rootLoc)
+		nc, e := NewConfigItem(c, man.rootLoc)
 		if e != nil {
 			err = e
 			continue
