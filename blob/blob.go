@@ -20,6 +20,11 @@ type PageInfo struct {
 	Title string
 	FName string
 	Date  time.Time
+	extra map[string]string
+}
+
+func (pi PageInfo) Extra(nm string) string {
+	return pi.extra[nm]
 }
 
 type BlobSet struct {
@@ -79,7 +84,7 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 				dt = pt
 			}
 		}
-		res = append(res, PageInfo{t, v.Name(), dt})
+		res = append(res, PageInfo{t, v.Name(), dt, mp})
 
 		f.Close()
 	}
