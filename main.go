@@ -2,26 +2,26 @@ package main
 
 import (
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"path"
 
+	"github.com/coderconvoy/lazyf"
 	"github.com/coderconvoy/templater/cfm"
 )
 
 var configMan *cfm.Manager
 
 func main() {
-	config := flag.String("c", "config.json", "Path to JSON Config file")
-	port := flag.String("p", "80", "Port")
-	debug := flag.Bool("d", false, "Debug to stdout")
-	flag.Parse()
+	port := lazyf.FlagString("p", "port", "Port") // TODO enable default at 80 from first in lazyf, then here
+	debug := lazyf.FlagBool("d", "debug", "Debug to stdout")
+
+	confs, cfname := lazyf.FlagLoad("c", "config.json")
 
 	var err error
 
-	configMan, err = cfm.NewManager(*config)
+	configMan, err = cfm.NewManager(confs, cfname)
 	if err != nil {
 		cfm.Logq("config error:", err)
 		return

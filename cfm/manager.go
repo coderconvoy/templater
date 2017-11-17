@@ -27,13 +27,13 @@ func (m Manager) LogLoc() string {
 
 //NewManager Creates a new Manager from json file based on ConfigItem
 //params cFileName the name of the file
-func NewManager(cFileName string) (*Manager, error) {
-	confs, err := lazyf.GetConfig(cFileName)
-	if err != nil {
-		return &Manager{}, errors.Wrap(err, "Could not load conf")
-	}
+func NewManager(confs []lazyf.LZ, cFileName string) (*Manager, error) {
+
 	if len(confs) == 0 {
 		return &Manager{}, errors.New("Conf, completely empty")
+	}
+	if len(confs) == 1 {
+		return &Manager{}, errors.New("Conf contains no Sites")
 	}
 	cfig := confs[0]
 	man := &Manager{
@@ -42,7 +42,7 @@ func NewManager(cFileName string) (*Manager, error) {
 		rootLoc:  cfig.PStringD(cFileName, "root"),
 	}
 
-	err = nil
+	var err error = nil
 	for _, c := range confs[1:] {
 		nc, e := NewConfigItem(c, man.rootLoc)
 		if e != nil {
