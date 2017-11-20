@@ -112,10 +112,6 @@ func (man *Manager) Confs() lazyf.LZ {
 	return man.confs
 }
 
-func (man *Manager) KeyLoc() string {
-	return man.confs.PStringD("", "certloc", "certlocs")
-}
-
 func (man *Manager) Domains() []string {
 	res := []string{}
 	for _, v := range man.sites {

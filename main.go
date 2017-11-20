@@ -16,6 +16,7 @@ var configMan *cfm.Manager
 func main() {
 	port := lazyf.FlagString("p", "80", "port", "Port")
 	debug := lazyf.FlagBool("d", "debug", "Debug to stdout")
+	keyloc := lazyf.FlagString("cloc", "", "certloc", "Location of Certificate Files")
 
 	confs, cfname := lazyf.FlagLoad("c", "config.json")
 
@@ -34,10 +35,8 @@ func main() {
 		fmt.Println("Debugging to stdout")
 	}
 
-	keyLoc := configMan.KeyLoc()
-
 	//if no keys
-	if keyLoc == "" {
+	if *keyloc == "" {
 		cfm.Logq("Starting with no TLS")
 		err := http.ListenAndServe(":"+*port, SafeMux{})
 		if err != nil {
@@ -58,7 +57,7 @@ func main() {
 
 	insecMux := InsecMux{}
 	for _, v := range doms {
-		cert, err := tls.LoadX509KeyPair(path.Join(keyLoc, v, pubkeyf), path.Join(keyLoc, v, privkeyf))
+		cert, err := tls.LoadX509KeyPair(path.Join(*keyloc, v, pubkeyf), path.Join(*keyloc, v, privkeyf))
 		if err != nil {
 			cfm.Logf("--X--%s\n", v)
 			continue
