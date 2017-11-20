@@ -14,7 +14,7 @@ import (
 var configMan *cfm.Manager
 
 func main() {
-	port := lazyf.FlagString("p", "port", "Port") // TODO enable default at 80 from first in lazyf, then here
+	port := lazyf.FlagString("p", "80", "port", "Port")
 	debug := lazyf.FlagBool("d", "debug", "Debug to stdout")
 
 	confs, cfname := lazyf.FlagLoad("c", "config.json")
