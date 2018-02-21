@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,8 +18,9 @@ func main() {
 	port := lazyf.FlagString("p", "80", "port", "Port")
 	debug := lazyf.FlagBool("d", "debug", "Debug to stdout")
 	keyloc := lazyf.FlagString("cloc", "", "certloc", "Location of Certificate Files")
+	secPort := lazyf.FlagString("sp", "443", "secport", "Port for TLS")
 
-	confs, cfname := lazyf.FlagLoad("c", "config.json")
+	confs, cfname := lazyf.FlagLoad("c", "config.lz")
 
 	var err error
 
@@ -55,14 +57,23 @@ func main() {
 	privkeyf := configMan.Confs().PStringD("privkey.pem", "privkey")
 	cfm.Logf("Keylocs:%s:%s", pubkeyf, privkeyf)
 
-	insecMux := InsecMux{}
+	insecMux := InsecMux{
+		secDoms: make(map[string]bool),
+		secPort: *secPort,
+	}
 	for _, v := range doms {
 		cert, err := tls.LoadX509KeyPair(path.Join(*keyloc, v, pubkeyf), path.Join(*keyloc, v, privkeyf))
 		if err != nil {
 			cfm.Logf("--X--%s\n", v)
 			continue
 		}
-		insecMux.secDoms = append(insecMux.secDoms, v)
+		//get domains out of certificate
+		xcert, err := x509.ParseCertificate(cert.Certificate[0])
+
+		insecMux.secDoms[xcert.Subject.CommonName] = true
+		for _, d := range xcert.DNSNames {
+			insecMux.secDoms[d] = true
+		}
 
 		scfg.Certificates = append(scfg.Certificates, cert)
 	}
@@ -70,7 +81,7 @@ func main() {
 	scfg.BuildNameToCertificate()
 
 	tlserver := http.Server{
-		Addr:      ":443",
+		Addr:      ":" + *secPort,
 		Handler:   SafeMux{},
 		TLSConfig: scfg,
 	}

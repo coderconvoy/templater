@@ -19,22 +19,36 @@ func (s SafeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type InsecMux struct {
-	secDoms []string
+	secDoms map[string]bool
+	secPort string
 }
 
 func (s InsecMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fnd := ""
 	cfm.Logq("Insec:" + r.Host)
-	host := strings.Split(r.Host, ":")[0]
-	for _, v := range s.secDoms {
-		if v == host {
-			fnd = v
-			break
-		}
+	sp := strings.Split(r.Host, ":")
+	host := sp[0]
+	port := ""
+	if s.secPort != "443" {
+		port = ":" + s.secPort
 	}
-	if fnd != "" {
-		http.Redirect(w, r, "https://"+host+r.URL.Path, 302)
+
+	trydomain := func(dom string) bool {
+		_, ok := s.secDoms[dom]
+		if ok {
+			http.Redirect(w, r, "https://"+dom+port+r.URL.Path, 302)
+			return true
+		}
+		return false
+	}
+	if trydomain(host) {
 		return
 	}
+	if trydomain("www." + host) {
+		return
+	}
+	if trydomain(strings.TrimPrefix(host, "www.")) {
+		return
+	}
+
 	SafeMux{}.ServeHTTP(w, r)
 }
