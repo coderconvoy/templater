@@ -114,6 +114,7 @@ func (ts *templateSite) TryTemplate(w io.Writer, host string, p string, data int
 	b := new(bytes.Buffer)
 	err := t.ExecuteTemplate(b, p, data)
 	if err != nil {
+		dbase.QLog(err.Error())
 		return err
 	}
 	io.Copy(w, b)
@@ -190,6 +191,8 @@ func (ts *templateSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	//try template
+	errlist := []error{}
+
 	for k, v := range p {
 		if v == '/' {
 			err = ts.TryTemplate(w, host, p[:k], Loose{p[k+1:], style})
@@ -200,18 +203,23 @@ func (ts *templateSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				return
 			}
+			errlist = append(errlist, err)
 			dbase.QLog(err)
 		}
 	}
-	err = ts.TryTemplate(w, host, p, Loose{p, style})
+	err = ts.TryTemplate(w, host, p, Loose{"", style})
 	if err == nil {
 		return
 	}
+	errlist = append(errlist, err)
 
 	err = ts.TryTemplate(w, host, "loose", Loose{p + ".md", style})
 	if err != nil {
 		dbase.QLog(err)
-		fmt.Fprintln(w, err)
+		errlist = append(errlist, err)
+		for _, e := range errlist {
+			fmt.Fprintln(w, e)
+		}
 	}
 
 }
