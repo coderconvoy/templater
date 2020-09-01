@@ -1,87 +1,34 @@
 package blob
 
 import (
-	"fmt"
-	"io/ioutil"
 	"testing"
 )
+
+func compDir(t *testing.T, dt []PageInfo, exp []string) {
+	if len(dt) != len(exp) {
+		t.Errorf("Not same num elems :%d , %d", len(dt), len(exp))
+	}
+
+	for k, v := range dt {
+		if v.FName != exp[k] {
+			t.Errorf("Diff elems")
+		}
+	}
+}
 
 func Test_Loader(t *testing.T) {
 	bs := NewBlobSet("test_data")
 
-	recs, err := bs.GetDir("s", "")
+	recs, err := bs.GetDir("s", "chapter")
 	if err != nil {
-		t.Log("Get Error")
-		t.FailNow()
+		t.Errorf("Get Error")
 	}
-	if len(recs) != 3 {
-		t.Logf("Not enough infos expected 3 , got : %d\n", len(recs))
-		t.FailNow()
-	}
+	compDir(t, recs, []string{"purple.md", "t2.md", "t1.md"})
 
-	for _, v := range recs {
-		fmt.Println(v)
-	}
-
-}
-
-func TestChannelAccess(t *testing.T) {
-	fm, killer := SafeBlobFuncs("test_data")
-
-	pinf, err := fm["getblobdir"].(func(string, ...string) ([]PageInfo, error))("s")
+	recs, err = bs.GetDir("s", "-chapter")
 	if err != nil {
-		t.Logf("Chan Err:%s", err)
-		t.FailNow()
+		t.Errorf("Get Error")
 	}
-	if len(pinf) != 3 {
-		t.Logf("wrong len: expected 3 , got %d", len(pinf))
-		t.Fail()
-	}
-
-	getblob := fm["getblob"].(func(string, string, ...string) (map[string]string, error))
-	mp, err := getblob("s", "purple.md")
-	if err != nil {
-		t.Log("getblob1 error back")
-		t.FailNow()
-	}
-	if mp["title"] != "My Favourite Color" {
-		t.Logf("title expected 'My Favourite Color' got %s", mp["title"])
-		t.Logf(mp["contents"])
-		t.Fail()
-	}
-	killer()
-
-	_, err = getblob("s", "purple.md")
-	if err == nil {
-		t.Log("No Error on closed chan fail")
-		t.Fail()
-	}
-
-}
-
-func test_ReadDir(t *testing.T) {
-	d, _ := ioutil.ReadDir("test_data")
-	for _, v := range d {
-		fmt.Println(v.Name())
-	}
-}
-
-func Test_GetNames(t *testing.T) {
-	fm, _ := SafeBlobFuncs("test_data")
-
-	f := fm["getblobnames"].(func(string, ...string) ([]string, error))
-
-	r, err := f("s")
-	if err != nil {
-		t.Logf("Error on read s, %s\n", err)
-		t.FailNow()
-	}
-	if len(r) != 3 {
-		t.Logf("Expected 3 members, got %d", len(r))
-		t.FailNow()
-	}
-	for _, v := range r {
-		fmt.Println(v)
-	}
+	compDir(t, recs, []string{"t1.md", "t2.md", "purple.md"})
 
 }

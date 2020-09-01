@@ -1,6 +1,9 @@
 package blob
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 type LessF func(PageInfo, PageInfo) bool
 
@@ -43,5 +46,44 @@ func ByDate(ascend bool) LessF {
 			return a.Date.Before(b.Date)
 		}
 		return b.Date.Before(a.Date)
+	}
+}
+
+func ByProp(pname string, ascend bool) LessF {
+	return func(a, b PageInfo) bool {
+		//empty all goes to one end
+		adat, ok := a.extra[pname]
+		if !ok {
+			return ascend
+		}
+		bdat, ok := b.extra[pname]
+		if !ok {
+			return ascend
+		}
+		//standard responses
+		if ascend {
+			return adat < bdat
+		}
+		return bdat < adat
+	}
+}
+
+func BlobSort(dt []PageInfo, sMode string) {
+	if sMode == "" {
+		sMode = "-date"
+	}
+	ascend := true
+	if strings.HasPrefix(sMode, "-") {
+		ascend = false
+		sMode = strings.TrimPrefix(sMode, "-")
+	}
+
+	switch sMode {
+	case "name":
+		Sort(dt, ByName(ascend))
+	case "date":
+		Sort(dt, ByDate(ascend))
+	default:
+		Sort(dt, ByProp(sMode, ascend))
 	}
 }

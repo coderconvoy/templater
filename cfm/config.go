@@ -49,6 +49,11 @@ func NewConfigItem(lz lazyf.LZ, root string) (ConfigItem, error) {
 		return c, err
 	}
 
+	if _, err := lz.PString("static", "Static"); err == nil {
+		c, err := NewStaticSite(lz, root)
+		return c, err
+	}
+
 	if _, err := lz.PString("folder", "Folder"); err == nil {
 		return NewTemplateSite(lz, root)
 	}

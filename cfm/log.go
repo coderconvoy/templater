@@ -96,7 +96,7 @@ func (lg *Manager) LogTo(host, s string) {
 
 func logToFolder(folder string, s string) error {
 	now := time.Now()
-	fname := now.Format("060102")
+	fname := now.Format("0601")
 	p := path.Join(folder, fname)
 	err := os.MkdirAll(folder, 0777)
 	if err != nil {
@@ -107,7 +107,7 @@ func logToFolder(folder string, s string) error {
 		return err
 	}
 
-	line := now.Format("15:04:05") + "::" + s + "\n"
+	line := now.Format("02-15:04:05") + "::" + s + "\n"
 	_, err = f.WriteString(line)
 	if err != nil {
 		return err

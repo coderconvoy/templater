@@ -1,5 +1,4 @@
 //The Purpose of the blob package is to provide a quick way of grabbing headed files from a template
-//calling blob.SafeBlobFuncs(string) returns a map of functions all wrapped in clojures to access the same BlobSet Blobs the header data from each blob is stored in ram, for quick listing and archiving in the main use
 package blob
 
 import (
@@ -38,10 +37,6 @@ func NewBlobSet(root string) *BlobSet {
 }
 
 func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
-	if sortBy != "name" {
-		sortBy = "date"
-	}
-
 	fol = path.Join(bs.root, fol)
 	store := sortBy + "#" + fol
 
@@ -89,11 +84,7 @@ func (bs *BlobSet) GetDir(fol string, sortBy string) ([]PageInfo, error) {
 		f.Close()
 	}
 
-	if sortBy == "name" {
-		Sort(res, ByName(true))
-	} else {
-		Sort(res, ByDate(false))
-	}
+	BlobSort(res, sortBy)
 
 	bs.m[store] = res
 
@@ -169,7 +160,7 @@ func AccessMap(rootFol string) template.FuncMap {
 	}
 
 	getOne := func(fol, file string, sortMode ...string) map[string]string {
-		sm := "date"
+		sm := ""
 		if len(sortMode) > 0 {
 			sm = sortMode[0]
 		}
